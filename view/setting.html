@@ -1,0 +1,64 @@
+<script>
+	$(document).ready(function(){
+
+		$("#changePass").click(function(){
+
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/user.passwd', {oldPass: $("#oldPass").val(), newPass:  $("#newPass").val()}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+			
+		});
+
+		if($(window.location.hash).length > 0){
+			$(".tab-pane").removeClass("active");
+			$(window.location.hash).addClass("active");
+			$(".setting-nav li").removeClass("active");
+			$(".setting-nav li a[href='"+window.location.hash+"']").parent().addClass("active");	
+		}
+
+		$(".setting-nav li a").click(function(){
+			window.location.href = $(this).attr("href");
+		});
+
+	});
+</script>
+<div class="setting">
+	<ul class="setting-nav swin block">
+		<li class="active"><a href="#passwd" data-toggle="tab">修改密码</a></li>
+	</ul>
+	<div class="setting-board tab-content">
+		<div class="tab-pane active" id="passwd">
+			<form class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label">原密码</label>
+					<div class="controls">
+						<input type="password" placeholder="6位以上字符" id="oldPass">
+					</div>
+				</div>
+				<div class="control-group">
+					<label class="control-label">新密码</label>
+					<div class="controls">
+						<input type="password" placeholder="6位以上字符" id="newPass">
+					</div>
+				</div>
+				<div class="control-group">
+					<div class="controls">
+						<div class="btn" id="changePass" data-loading-text="保存">保存</div>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,69 @@
+<script>
+	$(document).ready(function(){
+
+	});
+</script>
+
+<?php $date = date('Y-m-d'); ?>
+
+<div class="row block">
+	<div class="pull-right">总共<?php echo $total; ?>个任务</div>
+</div>
+<div class="swin block">
+	<table width="100%" border="0" class="table center" cellspacing="0">
+		<thead>
+			<tr>
+				<th colspan="5">名称</th>
+				<th colspan="5">状态</th>
+				<th colspan="7">操作</th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ($list as $value) { ?>
+			<tr class="list-ele">
+				<td colspan="5">
+					<?php echo $value['name']; ?>
+				</td>
+				<td colspan="5">
+					123
+				</td>
+				<td colspan="7">
+					<a class="btn" href="./job-<?php echo "{$value['job_id']}?{$date}"; ?>">查看</a>
+				</td>
+			</tr>
+			<?php } ?>
+			<?php if(count($list) == 0){ ?>
+			<!-- <tr class="list-ele">
+				<td colspan="26">
+					暂无
+					<?php if($search){ ?>
+						(<a href="javascript:void(0);" class="view-all">查看全部站点</a>)
+					<?php } ?>
+				</td>
+			</tr> -->
+			没有任务
+			<?php } ?>
+		</tbody>
+	</table>
+</div>
+
+<div class="page-nav block center">
+	<?php if($pagenum - 1 > 0){ ?>
+		<a href="./main-<?php echo $pagenum - 1; ?>">前一页</a>
+	<?php }else{ ?>
+		<a href="#" class="page-hide">前一页</a>
+	<?php } ?>
+
+	<?php 
+		$totalpage = ceil($total / $limit);
+		if($totalpage == 0) $totalpage = 1;
+	?>
+
+	<span class="page-info">当前第<?php echo $pagenum; ?>页/总共<?php echo $totalpage; ?>页</span>
+
+	<?php if($pagenum + 1 <= $totalpage){ ?>
+		<a href="./main-<?php echo $pagenum + 1; ?>">后一页</a>
+	<?php }else{ ?>
+		<a href="#" class="page-hide">后一页</a>
+	<?php } ?>
+</div>

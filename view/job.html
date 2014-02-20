@@ -1,0 +1,142 @@
+<div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-header">
+		<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+		<ul class="nav nav-tabs" id="myTab">
+			<li class="active"><a href="#postText" data-toggle="tab">笔记</a></li>
+			<li><a href="#postPage" data-toggle="tab">文章</a></li>
+			<!-- <li><a href="#postImg" data-toggle="tab">图片</a></li> -->
+		</ul>
+	</div>
+	<div class="modal-body">
+ 
+		<div class="tab-content">
+			<div class="tab-pane active" id="postText">
+				<textarea rows="3"></textarea>
+			</div>
+			<div class="tab-pane" id="postPage">
+				<div class="form-inline">
+					<label class="checkbox">
+						标题
+					</label>
+					<input type="text" class="input-xlarge">
+				</div>
+				<textarea rows="3"></textarea>
+				<div class="form-inline">
+					<label class="checkbox">
+						链接
+					</label>
+					<input type="text" class="input-xlarge">
+				</div>
+			</div>
+			<!-- <div class="tab-pane" id="postImg">
+				<form class="form-inline">
+					<label class="checkbox">
+						图片链接
+					</label>
+					<input type="text" class="input-xlarge">
+				</form>
+			</div> -->
+		</div>
+	</div>
+	<div class="modal-footer">
+		<button class="btn btn-danger">保存</button>
+	</div>
+</div>
+
+<script>
+	$(document).ready(function(){
+		var job_id = $("#job_id").val();
+		var modal = $('#myModal');
+
+		$(".pro-add").click(function(){
+			var describe = $(this).siblings("input").val();
+			$.post('./active/job.problem.add', {job_id: job_id, describe: describe}, function(data){
+
+				data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ id: '1', message: data.msg, type:"error", showCloseButton: true});
+				}
+			});
+		});
+
+		$(".problem-title").click(function(){
+			solution = $(this).parent().siblings(".problem-solution");
+			if(solution.is(":visible")){
+				solution.hide();
+				$(this).prev().removeClass("pro-hasopen");
+			}else{
+				solution.show();
+				$(this).prev().addClass("pro-hasopen");
+			}
+		});
+
+		$(".pro-attr").click(function(){
+			solution = $(this).parent().parent().siblings(".problem-solution");
+			if(solution.is(":visible")){
+				solution.hide();
+				$(this).parent().removeClass("pro-hasopen");
+			}else{
+				solution.show();
+				$(this).parent().addClass("pro-hasopen");
+			}
+		});
+
+		$(".solution-add").click(function(){
+			modal.modal('show');
+		});
+
+
+	});
+</script>
+
+<input id="job_id" value="<?php echo $info['job_id']; ?>" type="hidden"/>
+
+<div class="bottom-block">
+	<h4 class="center job-title">
+		<?php echo $info['name']; ?>
+	</h4>
+	<div class="center">
+		<?php echo $date; ?>
+	</div>
+</div>
+
+<?php foreach ($problem as $value) { ?>
+	<div class="swin bottom-block pro-block">
+		<div class="row">
+			<div class="span2">
+				<div class="pro-attr pro-open">+ 点击展开(0)</div>
+				<div class="pro-attr pro-close">- 点击收起(0)</div>
+			</div>
+			<div class="span8 center problem-title">
+				<?php echo $value['describe']; ?>
+			</div>
+			<div class="span2 text-right pro-operation">
+				<div class="btn">完成</div>
+				<div class="btn">删除</div>
+			</div>
+		</div>
+		<div class="problem-solution">
+			<div class="row pro-info">
+				<div class="span12 pro-info-content swin-dark block">
+					撒点撒大赛点撒点撒点撒
+
+				</div>
+			</div>
+			<div class="row pro-info">
+				<div class="span12 pro-info-content swin-dark block">...</div>
+			</div>
+			<div class="row pro-info">
+				<div class="span12 pro-info-content swin-dark block center">
+					<div class="btn btn-danger solution-add ">添加</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<?php } ?>
+
+<form class="swin block form-inline center">
+	<input type="text" class="input-xxlarge" placeholder="疑问" name="problem">
+	<div class="btn pro-add">添加</div>
+</form>

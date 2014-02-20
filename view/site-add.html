@@ -1,0 +1,105 @@
+<script>
+	$(document).ready(function(){
+
+		$("#siteAdd").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			//获取套餐集合
+			level = [];
+			$.each($("input[name='levels']:checked"), function(i, n){
+				level.push($(n).val());
+			});
+
+			$.post('./active/site.add', {domain: $("#domain").val(), ip: $("#ip").val(), levels: level.join(",")}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					$.globalMessenger().post({
+						message: data.msg, 
+						type:"success", 
+						showCloseButton: true,
+						actions: {
+							enter: {
+								label: "直接进入",
+								phrase: '跳转新添加站点(TIME)',
+								auto: true,
+								delay: 2,
+								action: function() {
+									window.location.href = "./site-"+data.data.site_id+"-help";
+								}							
+							}
+						}
+					});
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".guide-label").tooltip();
+
+		<?php if($ip){ ?>
+		setTimeout(function(){
+			$("#ip").attr("value", "<?php echo $ip; ?>"+":80");
+		}, 1000);
+		<?php } ?>
+		
+	});
+</script>
+<div class="site-add bordered-section">
+	<div class="site-progress">
+		<div class="progress progress-striped active">
+			<div class="bar" style="width: 25%;"></div>
+		</div>
+	</div>
+	<ul class="site-help-guide">
+		<li>
+			<span class="guide-text">1.添加域名</span>
+			<span class="guide-label label label-success" data-toggle="tooltip" title="<?php echo $domain; ?>" >已完成</span>
+		</li>
+		<li>
+			<span class="guide-text">2.设置源站IP</span>
+			<span class="guide-label label label-warning">未完成</span>
+		</li>
+		<li>
+			<span class="guide-text">3.选择加速套餐</span>
+			<span class="guide-label label label-warning">未完成</span>
+		</li>
+		<li>
+			<span class="guide-text">4.解析CNAME</span>
+			<span class="guide-label label label-warning">未完成</span>
+		</li>
+	</ul>
+	<div class="clear"></div>
+	<h3 class="site-add-domain"><?php echo $domain; ?></h3>
+	<div class="site-add-input">
+		<input type="hidden" id="domain" value="<?php echo $domain; ?>"/>
+		<input type="text" class="input-large" placeholder="源站IP:端口(可选)" id="ip" />
+	</div>
+	<div class="site-level-header">
+		<span class="level-about">加速套餐</span>
+	</div>
+	<div class="site-level-list">
+		<?php foreach ($levels as $value) { ?>
+			<label class="checkbox inline">
+				<input type="checkbox" name="levels" value="<?php echo $value['level_id']; ?>" <?php if($value['level_id'] == 2 || $value['level_id'] == 0) echo 'checked'; ?> > 
+				<?php 
+					echo $value['name'];
+					if(isset($value['beian'])){
+						if($value['beian']) echo '【需备案】'; 
+						else echo '【免备案】';
+					}
+				?> 
+			</label>
+		<?php } ?>
+	</div>
+	<div class="site-add-btn">
+		<div class="btn btn-info" id="siteAdd" data-loading-text="添加站点">添加站点</div>
+		<a href="./main" class="btn">返回</a>
+	</div>
+</div>
+

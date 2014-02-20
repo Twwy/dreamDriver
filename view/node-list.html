@@ -1,0 +1,282 @@
+<script>
+	$(document).ready(function(){
+
+		$(".node-group").tooltip();
+
+		$("#addNode").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			ip = $("#ip").val();
+
+			if(ip == ""){
+				btn.button('reset');
+				return $.globalMessenger().post({message: "请填写IP", type:"error", showCloseButton: true});
+			}
+
+			ipreg = /^([0-9]{1,3}\.){3}[0-9]{1,3}$/;
+			if(!ipreg.test(ip)){
+				btn.button('reset');
+				return $.globalMessenger().post({message: "请检查IP格式", type:"error", showCloseButton: true});
+			}
+
+			window.location.href = "./node-add?"+$("#ip").val();
+			
+		});
+
+		$(".edit-icon").click(function(){
+			remark = $(this).parent().parent();
+			if(remark.hasClass("node-remark-edit")){
+				remark.children("input").focus();
+				return;
+			}
+			remark.addClass("node-remark-edit");
+			remark.children("input").focus();
+			//激活时如果value为空则补充ip
+			// if(remark.children("input").val() == ""){
+			// 	remark.children("input").val(remark.attr("data-ip"));
+			// }
+		});
+
+
+		$(".node-remark input").focusout(function(){
+			var input = $(this);
+
+			if(input.attr("data-val") != input.val()){
+				var val = input.val();
+
+				if(val == ""){
+					setval = "";
+				}else setval = val;
+				input.siblings(".mark-text").children(".mark-val").text(setval);
+
+				$.post('./active/node.remark', {node_id: $(this).attr("data-id"), remark: val}, function(data){
+					var data = $.parseJSON(data);
+					if(data.result){
+						successInfo(data.msg, function(){
+							input.attr('data-val', val);
+						});
+					}else{
+						$.globalMessenger().post({ id: '1', message: data.msg, type:"error", showCloseButton: true});
+						input.parent().addClass("node-remark-edit");
+						//回滚
+						input.siblings(".mark-text").children(".mark-val").text(input.attr('data-val'));
+					}
+				});
+			}
+
+			input.parent().removeClass("node-remark-edit");
+
+		});
+
+		$(".node-remove").click(function(){
+			level = $(this).attr("data-level");
+			if(level != 0) return alert('节点属于公共套餐，无法直接删除，请到设置页提交删除申请');
+			id = $(this).attr("data-id");
+			if(!confirm("即将删除该节点，请确认")) return;
+
+			$.post('./active/node.remove', {node_id: id}, function(data){
+				// $("#cpu").animate({width: ""});
+				data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ id: '1', message: data.msg, type:"error", showCloseButton: true});
+				}
+			});
+		});
+
+		setInterval(function(){
+			$.post('./active/node.performance', {node_array: $("#nodeIDS").val()}, function(data){
+				// $("#cpu").animate({width: ""});
+				data = $.parseJSON(data);
+				if(data.result){
+					data = data.data;
+					for(i in data){
+						value = data[i];
+						// console.log(value);
+
+						var cpu = parseFloat(value.cpu_data);
+						if(cpu > 100) cpu = 100;
+						var lcpu = 100 - cpu;
+						$("#cpu"+value.node_id).css({width: cpu + "%"});
+						$("#lcpu"+value.node_id).css({width: lcpu + "%"});
+						$("#cpu"+value.node_id).siblings(".node-per-count").text(value.cpu_data);
+
+						var memory = parseFloat(value.memory_data);
+						if(memory > 100) memory = 100;
+						var lmemory = 100 - memory;
+						$("#memory"+value.node_id).css({width: memory + "%"});
+						$("#lmemory"+value.node_id).css({width: lmemory + "%"});
+						$("#memory"+value.node_id).siblings(".node-per-count").text(value.memory_data);
+
+						network = value.network_data.split('/');
+						if(network.length != 2) continue;
+						html = "流入&nbsp;"+$.trim(network[0])+"<br/>流出&nbsp;"+$.trim(network[1]);
+						$("#network"+value.node_id).html(html);
+					}
+				}
+			});
+		}, 3000);
+
+	});
+</script>
+<?php $node_ids = array(); ?>
+<div class="row node-filter">
+	<div class="span12">
+		<div class="pull-left site-count">总共<?php echo $total; ?>个节点
+			<?php if($privateCount > 0){ ?>
+				<a href="./node-private-group" class="btn">私有节点组</a>
+			<?php } ?>
+		</div>
+		<div class="form-inline pull-right">
+			<input id="ip" type="text" placeholder="IP地址">&nbsp;
+			<div class="btn btn-danger" data-loading-text="添加节点" id="addNode">添加节点</div>
+		</div>
+	</div>
+</div>
+<div class="node-list bordered-section">
+	<table width="100%" border="0" class="table" cellspacing="0">
+		<thead>
+			<tr class="ya">
+				<th colspan="5" style="text-align:left;">节点名称</th>
+				<th colspan="3" style="text-align:left;">节点IP</th>
+				<th colspan="4">状态</th>
+				<th colspan="6">性能</th>
+				<!-- <th colspan="3">节点组</th> -->
+				<th colspan="6">操作</th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ($list as $value) { ?>
+			<?php $node_ids[] = $value['node_id']; ?>
+			<tr>
+				<td colspan="5" class="node-remark" style="text-align:left;">
+					<input type="text" data-id="<?php echo $value['node_id']; ?>" value="<?php echo $value['remark']; ?>" data-val="<?php echo $value['remark']; ?>"/>
+					<div class="mark-text">
+						<span class="mark-val">
+							<?php 
+								if(!empty($value['remark'])) echo $value['remark'];
+								else echo '&nbsp;';
+							?>
+						</span>
+						<span class="edit-icon" >
+							<span class="icon-edit"></span>
+						</span>
+					</div>
+				</td>
+				<td colspan="3" style="text-align:left;">
+					<?php echo $value['ip']; ?><br/>
+					<div class="stext">
+						<span class="icon-globe"></span>暂无
+					</div>
+				</td>
+				<td colspan="4">
+					<?php 
+						$nodeLevel = '私有';
+						$private = '';
+						if($value['level_id'] != 0){
+							$level = getLevel($value['level_id']);
+							$nodeLevel = $level['name'];
+						}else{
+							$private .= 'data-html="true" data-toggle="tooltip" title="';
+							foreach ($value['pgroup'] as $pvalue) {
+								$private .= "{$pvalue['name']}<br/>";
+							}
+							$private .= '"';
+						}
+						if($value['remove'] == 0){
+							if($value['access'] == 1) echo "<span {$private} class=\"node-group label label-success\">{$nodeLevel}</span>";
+							elseif($value['power'] == 1) echo "<span {$private} class=\"node-group label label-warning\">{$nodeLevel}(无权限)</span>";
+							else echo "<span {$private} class=\"node-group label label-important\">{$nodeLevel}(未启动)</span>";
+						}else{
+							echo "<span class=\"label label-important\">删除中</span>";
+						}
+					?>
+				</td>
+				<td colspan="6" class="stext">
+					<?php if($value['remove'] == 0){ ?>
+						<?php if(!empty($value['cpu_data'])){ ?>
+						<div class="node-per">
+							<span class="node-per-info">CPU</span>
+							<div class="progress">
+								<div class="node-per-count"><?php echo $value['cpu_data']; ?></div>
+								<?php 
+									$cpu = (int)str_replace('%', '', $value['cpu_data']);
+									if($cpu > 100) $cpu = 100;
+									elseif($cpu < 0) $cpu = 0;
+									$left = 100 - $cpu;
+									echo "<div id=\"cpu{$value['node_id']}\" class=\"bar bar-danger\" style=\"width: {$cpu}%;\"></div>";
+									echo "<div id=\"lcpu{$value['node_id']}\" class=\"bar bar-success\" style=\"width: {$left}%;\"></div>";
+								?>
+							</div>
+						</div>
+						<?php } ?>
+						<?php if(!empty($value['memory_data'])){ ?>
+						<div class="node-per">
+							<span class="node-per-info">内存</span>
+							<div class="progress">
+								<div class="node-per-count"><?php echo $value['memory_data']; ?></div>
+								<?php 
+									$memory = (int)str_replace('%', '', $value['memory_data']);
+									if($memory > 100) $memory = 100;
+									elseif($memory < 0) $memory = 0;
+									$left = 100 - $memory;
+									echo "<div id=\"memory{$value['node_id']}\" class=\"bar bar-danger\" style=\"width: {$memory}%;\"></div>";
+									echo "<div id=\"lmemory{$value['node_id']}\" class=\"bar bar-success\" style=\"width: {$left}%;\"></div>";
+								?>
+							</div>
+						</div>
+						<?php } ?>
+						<?php if(!empty($value['memory_data'])){ ?>
+						<?php 
+							$network = explode('/', $value['network_data']);
+							if(isset($network[0])) $network[0] = trim($network[0]);
+							else $network[0] = '';
+							if(isset($network[1])) $network[1] = trim($network[1]);
+							else $network[1] = '';
+						?>
+						<div class="node-per node-network">
+							<span class="node-per-info">网卡</span>
+							<div class="node-network-info" id="network<?php echo $value['node_id'];?>">
+								流入&nbsp;<?php echo $network[0]; ?><br/>
+								流出&nbsp;<?php echo $network[1]; ?>
+							</div>
+						</div>
+						<?php } ?>
+					<?php } ?>
+				</td>
+				<td colspan="6">
+					<?php if($value['remove'] == 0){ ?>
+					<div class="node-do">
+						<a href="./node-<?php echo $value['node_id']; ?>" class="btn">查看</a>
+						<a href="./node-<?php echo $value['node_id']; ?>-setting" class="btn">设置</a>
+						<a href="javascript:;" class="btn node-remove" data-id="<?php echo $value['node_id']; ?>" data-level="<?php echo $value['level_id']; ?>" >删除</a>
+					</div>
+					<?php } ?>
+				</td>
+			</tr>
+			<?php } ?>
+		</tbody>
+	</table>
+</div>
+<input type="hidden" id="nodeIDS" value="<?php echo implode(',', $node_ids); ?>"/>
+<div class="page-nav">
+	<?php if($pagenum - 1 > 0){ ?>
+		<a href="./node-list-<?php echo $pagenum - 1; ?>">前一页</a>
+	<?php }else{ ?>
+		<a href="#" class="page-hide">前一页</a>
+	<?php } ?>
+
+	<?php 
+		$totalpage = ceil($total / $limit);
+	?>
+
+	<span class="page-info">当前第<?php echo $pagenum; ?>页/总共<?php echo $totalpage; ?>页</span>
+
+	<?php if($pagenum + 1 <= $totalpage){ ?>
+		<a href="./node-list-<?php echo $pagenum + 1; ?>">后一页</a>
+	<?php }else{ ?>
+		<a href="#" class="page-hide">后一页</a>
+	<?php } ?>
+</div>

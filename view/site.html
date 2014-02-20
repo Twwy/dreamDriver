@@ -1,0 +1,1701 @@
+<input type="hidden" id="site_id" value="<?php echo $site_id; ?>">
+<div class="site-nav">
+	<h3 class="pull-left domain ya">
+		<?php echo $siteInfo['domain']; ?><?php if($siteInfo['port'] != 80) echo ":{$siteInfo['port']}"; ?>
+	</h3>
+	<div class="pull-right site-nav-link ya">
+		<a href="./site-<?php echo $site_id; ?>" <?php if($subpage == 'about') echo 'class="active"';?> >当前概况</a>&nbsp;
+		<a href="./site-<?php echo $site_id; ?>-traffic" <?php if($subpage == 'traffic') echo 'class="active"';?>>流量统计</a>&nbsp;
+		<a href="./site-<?php echo $site_id; ?>-manage" <?php if($subpage == 'manage') echo 'class="active"';?>>管理设置</a>&nbsp;
+		<a href="./site-<?php echo $site_id; ?>-node" <?php if($subpage == 'node') echo 'class="active"';?>>加速套餐</a>&nbsp;
+		<a href="./site-<?php echo $site_id; ?>-cache" <?php if($subpage == 'cache') echo 'class="active"';?>>缓存规则</a>&nbsp;
+		<a href="./site-<?php echo $site_id; ?>-help" <?php if($subpage == 'help') echo 'class="active"';?>>使用向导</a>
+	</div>
+</div>
+<?php if($subpage == 'about'){ ?>
+<script>
+	$(document).ready(function(){
+		$(".f24-time-ele").tooltip();
+	});
+</script>
+<div class="site-about bordered-section">
+	<div class="site-about-title f24time-node">
+		<?php
+			$ok = 0;
+			$level_pause = 0;
+			$server_pause = 0;
+			foreach ($nodes as $value) {
+				if($value['level_pause'] == 1){
+					$level_pause++;
+					continue;
+				}
+				if($value['server_pause'] == 1){
+					$server_pause++;
+					continue;
+				}
+				$ok++;
+			}
+		?>
+		加速节点:&nbsp;
+
+		<?php if($ok > 0){ ?>
+			正常<a href="./site-<?php echo $site_id; ?>-node">[<?php echo $ok; ?>]</a>
+		<?php } ?>
+
+		<?php if($level_pause > 0){ ?>
+			暂停<a href="./site-<?php echo $site_id; ?>-node">[<?php echo $level_pause; ?>]</a>
+		<?php } ?>
+
+		<?php if($server_pause > 0){ ?>
+			故障<a href="./site-<?php echo $site_id; ?>-node">[<?php echo $server_pause; ?>]</a>
+		<?php } ?>
+	</div>
+	<div class="site-about-title f24time-title">最近24小时流量</div>
+	<div class="f24time">
+		<?php for ($i = 23; $i >= 0; $i--) { ?>
+			<?php 
+				$time = time() - 3600 * $i;
+				$key = date('Ymd-H', $time);
+				$month = date('m', $time);
+				$day = date('d', $time);
+				$hour = date('H', $time);
+			?>
+
+			<?php if(isset($data24[$key]) && !empty($data24[$key]) && $summary['max'] > 0){ ?>
+
+			<?php
+				$per = ($data24[$key]['flow'] / $summary['max']) * 100 ;
+
+				$hFlow = bitShow($data24[$key]['flow'], 3);
+				$hHitFlow = bitShow($data24[$key]['hit_flow'], 3);
+				$hCount = $data24[$key]['count'];
+				$hHitCount = $data24[$key]['hit_count'];
+				$hPer = round(($hHitCount / $hCount) * 100, 2);
+				
+			?>
+			<div class="f24-time-ele" data-html="true" data-toggle="tooltip" title="<?php echo "{$month}月{$day}日{$hour}点<br>流量: {$hFlow} <br> 命中流量: {$hHitFlow}<br>请求次数: {$hCount} 命中次数: {$hHitCount} <br>命中率: {$hPer}% "; ?>">
+					<?php if($per > 0.5){ ?>
+						<div class="f24-time-value" style="height:<?php echo $per; ?>%;"></div>
+					<?php }else{ ?>
+						<div class="f24-time-value"></div>
+					<?php } ?>
+					<?php 
+						if($hour == 0){
+							echo "<div class=\"time-sign\">{$month}月{$day}日</div>";
+						}elseif($hour == 18 ||$hour == 12 || $hour == 6){
+							echo "<div class=\"time-sign\">{$hour}:00</div>";
+						}
+					?>
+			</div>
+			<?php }else{ ?>
+				<div class="f24-time-ele" data-html="true" data-toggle="tooltip" title="<?php echo "{$month}月{$day}日{$hour}点<br>流量: 0B <br> 命中流量: 0B<br>请求次数: 0 命中次数: 0 "; ?>">
+					<div class="f24-time-value"></div>
+					<?php 
+						if($hour == 0){
+								echo "<div class=\"time-sign\">{$month}月{$day}日</div>";
+						}elseif($hour == 18 ||$hour == 12 || $hour == 6){
+							echo "<div class=\"time-sign\">{$hour}:00</div>";
+						}
+					?>
+				</div>
+			<?php } ?>
+		<?php }?>
+	</div>
+</div>
+<?php } ?>
+<?php if($subpage == 'traffic'){ ?>
+<script>
+	$(document).ready(function(){
+		$(".traffic-num").tooltip();
+		$(".traffic-hour").tooltip();
+		$(".data-line").tooltip();
+
+		$("#timeSet").click(function(){
+			var year = $("#year").val();
+			var month = $("#month").val();
+			window.location.href = "./site-<?php echo $site_id; ?>-traffic?"+year+month;
+		});
+
+		$("#timeChange").click(function(){
+			$(".traffic-time").addClass("traffic-time-change");
+		});
+
+		$(".data-show").click(function(){
+			if($(this).hasClass("line-mode")){
+				$(this).removeClass("line-mode").addClass("detail-mode");
+			}else{
+				$(this).removeClass("detail-mode").addClass("line-mode");
+			}
+		});
+
+	});
+
+</script>
+<div class="site-traffic bordered-section">
+	<div class="traffic-time">
+		<div class="pull-left">
+			<?php if($nowMonth){ ?>
+				<h3 class="pull-left">本月流量</h3>
+			<?php }else{ ?>			
+				<h3 class="pull-left">
+					<?php echo "{$time['year']}年{$time['month']}月"; ?> 流量
+				</h3>
+			<?php } ?>
+			<!-- <a class="pull-left btn time-set" id="timeChange" href="#">更改时间</a> -->
+		</div>
+		<div class="form-inline pull-right time-change">
+			<select class="input-small" id="year">
+				<?php for ($i=date('Y'); $i >= date('Y')-5; $i--) { ?>
+					<option value="<?php echo $i; ?>"><?php echo "{$i}年"; ?></option>
+				<?php } ?>
+			</select>
+			<select class="input-small" id="month">
+				<?php for ($i=1; $i <= 12; $i++) { ?>
+					<option <?php if($i == (int)date('m')) echo 'selected'; ?> value="<?php echo sprintf("%02d", $i); ?>"><?php echo "{$i}月"; ?></option>
+				<?php } ?>
+			</select>
+			<div class="btn" id="timeSet">查看</div>
+		</div>
+	</div>
+	<div class="clear"></div>
+	<div class="traffic-count ribbon row">
+		<div class="span3" id="trafficStream">
+			<h3>流量</h3>
+			<?php
+				// if($count['flow'] > 10) $totalflow = round($count['flow'], 1);
+				// else $totalflow = round($count['flow'], 5);
+				// $totalflow = sprintf("%6f", $count['flow']);
+				$totalflow = bitShow($count['flow'], 1);
+				$totalflowtitle = bitShow($count['flow'], 3);
+				$hitflowtitle = bitShow($count['hit_flow'], 3);
+			?>
+			<h2 class="traffic-num" data-html="true" data-toggle="tooltip" title="总流量:<?php echo $totalflowtitle; ?><br>缓存命中流量:<?php echo $hitflowtitle; ?>">
+				<?php echo $totalflow; ?>
+			</h2>
+		</div>
+		<div class="span4">
+			<h3>请求次数</h3>
+			<h2 class="traffic-num" data-html="true" data-toggle="tooltip" title="总次数:<?php echo $count['count']; ?><br>缓存命中次数:<?php echo $count['hit_count']; ?>">
+				<?php echo $count['count']; ?>
+			</h2>
+		</div>
+		<div class="span3">
+			<h3>缓存命中率</h3>
+			<h2 class="traffic-num" data-toggle="tooltip" title="缓存命中率=缓存命中请求次数/总请求次数" >
+				<?php
+				if($count['count'] > 0){
+					$totalper = $count['hit_count'] / $count['count'] * 100;
+					echo round($totalper, 2).'%';
+				} 
+				?>
+			</h2>
+		</div>
+	</div>
+	<div class="ribbon-shadow-l"></div>
+	<div class="ribbon-shadow-r"></div>
+	<div class="traffic-data">
+		<table class="table table-striped">
+              <thead>
+                <tr>
+                  <th colspan="4">日期</th>
+                  <th colspan="3">流量</th>
+                  <th colspan="3">请求次数</th>
+                  <th colspan="3">缓存命中率</th>
+                  <th colspan="14"></th>
+                </tr>
+              </thead>
+              <tbody>
+              	<?php 
+              		if($nowMonth){ 
+              			$start_time = strtotime("{$time['year']}-{$time['month']}-1 0:0:0");
+              			$stop_time = time();
+              		}else{
+              			$start_time = strtotime("{$time['year']}-{$time['month']}-1 0:0:0");
+              			$month = $time['month'] + 1;
+              			$stop_time = strtotime("{$time['year']}-{$month}-1 0:0:0") - 1;
+              		}
+              	?>
+              	<?php for($i = $stop_time; $i >= $start_time; $i = $i - 3600*24){ ?>
+              	<tr>
+					<td colspan="4">
+						<?php 
+							echo date('m月d日', $i);
+							$key = (int)date('d', $i);
+						?>
+					</td>
+					<td colspan="3">
+					<?php
+						if(isset($flow[$key]) && $flow[$key]['flow'] > 0){
+							$dayflow = $flow[$key]['flow'];
+							// if($dayflow > 10) $dayflow = round($dayflow, 1);
+							// else $dayflow = round($dayflow, 5);
+							// $dayflow = sprintf("%8f", $dayflow);
+							$dayflow = bitShow($dayflow, 1);
+							echo $dayflow;
+						}else echo '0B';
+					?>
+                	</td>
+					<td colspan="3">
+					<?php 
+						if(isset($flow[$key])){
+							echo $flow[$key]['count'];
+						}else echo '0';
+					?>
+					</td>
+                  <td colspan="3">
+                  	<?php 
+						if(isset($flow[$key])){
+							$per = ($flow[$key]['hit_count'] / $flow[$key]['count']) * 100; 
+							echo round($per, 2).'%';
+						}
+					?>
+					</td>
+					<td colspan="14" class="data-show line-mode">
+					<div class="data-line" style="width:<?php 
+
+					if(isset($flow[$key]) && $count['max_flow'] != 0){
+						$width = $flow[$key]['flow'] / $count['max_flow'] * 100;
+						echo round($width, 2);
+					}else echo 0;
+
+                  	?>%" data-toggle="tooltip" title="点击查看详细"></div>
+                  	<?php 
+                  	if(isset($flow[$key]['data']) && count($flow[$key]['data']) > 0){
+						//计算最大值
+                  		$max = 0;
+                  		//按照小时重新排序
+                  		$hourFlow = array();
+                  		foreach ($flow[$key]['data'] as $value){
+                  			if($value['flow'] > $max) $max = $value['flow'];
+                  			$hourFlow["h{$value['hour']}"] = $value;
+                  		}
+                  		// var_dump($flow);
+                  	?>
+                  	<div class="data-detail">
+                  		<?php for ($j = 0; $j < 24; $j++) { ?>
+                  			<?php if(isset($hourFlow["h{$j}"])){ ?>
+                  				<?php
+                  					if($max > 0) $height = $hourFlow["h{$j}"]['flow'] / $max * 100;
+                  					else $height = 2;
+                  					if($height < 2) $height = 2;
+                  					$hFlow = bitShow($hourFlow["h{$j}"]['flow'],3);
+                  					$hHitFlow = bitShow($hourFlow["h{$j}"]['hit_flow'], 3);
+                  					$hCount = $hourFlow["h{$j}"]['count'];
+                  					$hHitCount = $hourFlow["h{$j}"]['hit_count'];
+                  					$hPer = round(($hHitCount / $hCount) * 100, 2);
+                  				?>
+                  				<div class="data-hour-block traffic-hour" data-html="true" data-toggle="tooltip" title="<?php echo "{$j}点<br>流量: {$hFlow} <br> 命中流量: {$hHitFlow}<br>请求次数: {$hCount} 命中次数: {$hHitCount} <br>命中率: {$hPer}% "; ?>">
+                  					<div class="data-hour" style="height:<?php echo round($height, 2); ?>%" ></div>
+                  					<?php 
+										if($j == 24 || $j == 21 || $j == 18 || $j == 15 ||$j == 12 || $j == 9 || $j == 6 || $j == 3 || $j == 0){
+											echo "<div class=\"time-sign\">{$j}:00</div>";
+										}
+									?>
+								</div>
+                  			<?php }else{ ?>
+                  				<div class="data-hour-block traffic-hour" data-html="true" data-toggle="tooltip" title="<?php echo "{$j}点<br>流量: 0B <br> 命中流量: 0B<br>请求次数: 0 命中次数: 0 "; ?>">
+                  					<div class="data-hour"></div>
+                  					<?php 
+										if($j == 24 || $j == 21 || $j == 18 || $j == 15 ||$j == 12 || $j == 9 || $j == 6 || $j == 3 || $j == 0){
+											echo "<div class=\"time-sign\">{$j}:00</div>";
+										}
+									?>
+                  				</div>
+                  			<?php } ?>
+                  		<?php } ?>
+                  	</div>
+                  	<?php }  ?>
+                  </td>
+                </tr>				
+				<?php } ?>
+              </tbody>
+            </table>
+	</div>
+</div>
+<?php } ?>
+<?php if($subpage == 'manage'){ ?>
+<script>
+	$(document).ready(function(){
+		$("#beianCheck").click(function(){
+
+			if(!confirm('对于已备案网站，CNAME会切换到国内高速CNAME，域名的DNS记录请及时进行更新')) return;
+
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.beian', {site_id: <?php echo $site_id; ?>}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					msg = data.msg;
+
+					//然后进行切换套餐
+					if(!confirm('检测成功，已备案站点是否从海外套餐切换至普通套餐'))return successInfo(data.msg);
+
+					//打开普通套餐
+					$.post('./active/site.level', {site_id: <?php echo $site_id; ?>, level_id: 2, method: 'on'}, function(data){
+						var data = $.parseJSON(data);
+						if(data.result){
+							//关闭海外套餐
+							$.post('./active/site.level', {site_id: <?php echo $site_id; ?>, level_id: 1, method: 'off'}, function(data){
+								successInfo(msg);
+							});
+						}else successInfo(msg);
+					});
+
+
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});	
+		});
+
+		$(".cname-check").click(function(){
+			if($(this).text() == '检测中') return;
+			$(this).text('检测中');
+
+			$.post('./active/site.cname', {site_id: <?php echo $site_id; ?>}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});	
+		});
+
+		$("#cnameCheck").click(function(){
+			$(".cname-check").click();
+		});
+
+		$("#noneNew").click(function(){
+			$("#mdList").addClass("mdomain-edit");
+		});
+
+		$(".list-new").click(function(){
+			$("#mdList").addClass("mdomain-edit");
+		});
+
+		$("#aliasSave").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.alias.set', {site_id: <?php echo $site_id; ?>, domain: $("#aliasInput").val()}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".alias-del").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.alias.unset', {site_id: <?php echo $site_id; ?>, domain: btn.attr("data-val")}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".source-del").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.source.remove', {source_id: btn.attr("data-id")}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$("#purgeAll").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.purge', {site_id: <?php echo $site_id; ?>}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg, function(){});
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+				}
+				setTimeout(function(){
+					btn.button('reset');
+				}, 1000);
+			});
+		});
+
+		$(".source-save").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			var type = $(this).siblings(".source-type").val();
+			var ip = $(this).siblings(".source-ip").val();
+			var id = parseInt(btn.attr("data-id"));
+
+			if(id == 0){
+				$.post('./active/site.source.add', {site_id: <?php echo $site_id; ?>,type: type, ip: ip}, function(data){
+					var data = $.parseJSON(data);
+					if(data.result){
+						successInfo(data.msg);
+					}else{
+						$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+						setTimeout(function(){
+							btn.button('reset');
+						}, 1000);
+					}
+				});
+			}else{
+				$.post('./active/site.source.update', {type: type, ip: ip, source_id: btn.attr("data-id")}, function(data){
+					var data = $.parseJSON(data);
+					if(data.result){
+						successInfo(data.msg);
+					}else{
+						$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+						setTimeout(function(){
+							btn.button('reset');
+						}, 1000);
+					}
+				});
+			}
+		});
+
+		$(".source-edit").click(function(){
+			$(this).parent().parent().addClass("source-edit-mode");
+		});
+
+		$(".source-more").click(function(){
+			$(".source-input").removeClass("source-mode-simple").addClass("source-mode-list");
+			$(".new-source").addClass("source-edit-mode");
+		});
+
+		$(".source-cancel").click(function(){
+			$(this).parent().parent().removeClass("source-edit-mode");
+		});
+
+
+
+		$('#hostVal').textext({
+			plugins : 'arrow autocomplete'
+		}).bind('getSuggestions', function(e, data){
+			var list = ['自动','空'],
+				textext = $(e.target).textext()[0],
+				query = (data ? data.query : '') || '';
+
+			$(this).trigger('setSuggestions',{result: textext.itemManager().filter(list, query)});
+        });
+
+		$("#hostSave").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			val = $('#hostVal').val();
+			if(val == '自动') val = 'auto';
+			if(val == '空') val = '';
+
+			if(val == ""){
+				if(!confirm("Host将置空,请确认")){
+					btn.button('reset');
+					return false;
+				}
+			}
+
+			$.post('./active/site.host', {site_id: <?php echo $site_id; ?>, host: val}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$("#portEdit").click(function(){
+			<?php if(isset($session_data['node']) && $session_data['node']){ ?>
+
+				if($(this).attr("data-port") == 80){
+					if(!confirm('改为非80端口将只能使用私有节点，请确认')) return;
+				}
+				$(this).parent().parent().addClass("mangage-port-edit");
+
+			<?php }else{ ?>
+
+				return alert('没有私有节点不能使用此功能');
+
+			<?php } ?>
+		});
+
+		$("#portSave").click(function(){
+			port = $("#portNum").val();
+			if(port == 0 || port == "") return;
+
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.port', {port: port, site_id: <?php echo $site_id; ?>}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+
+		});
+
+		$("#sourceMode").change(function(){
+			sourceMode = $(this);
+			val = $(this).val();
+			$.post('./active/site.source.mode', {site_id: <?php echo $site_id; ?>, mode: val}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					//变成原来的值
+					sourceMode.val(sourceMode.attr("data-val"));
+				}
+			});
+		});
+
+		$("#proxyMode").change(function(){
+			proxyMode = $(this);
+			val = $(this).val();
+			$.post('./active/site.proxy.mode', {site_id: <?php echo $site_id; ?>, mode: val}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					//变成原来的值
+					sourceMode.val(sourceMode.attr("data-val"));
+				}
+			});
+		});
+
+	});
+</script>
+<div class="site-manage bordered-section">
+<table width="100%" border="0" class="table" cellspacing="0">
+	<thead>
+		<tr>
+			<th class="mangage-name" colspan="1">CNAME</th>
+			<th colspan="4">
+				<?php if($siteInfo['cname_type'] == 0){ ?>
+					<span class="text"><?php echo $siteInfo['cname']; ?></span>
+					<?php if($siteInfo['cname_valid'] == 0){ ?>
+						<span class="label label-warning cname-check">DNS记录未解析</span>
+					<?php }else{ ?>
+						<span class="label label-success cname-check">DNS记录已解析</span>
+					<?php } ?>
+				<?php }else{ ?>
+					<span class="text"><?php echo $siteInfo['ucname']; ?></span>
+					<?php if($siteInfo['ucname_valid'] == 0){ ?>
+						<span class="label label-warning cname-check">DNS记录未解析</span>
+					<?php }else{ ?>
+						<span class="label label-success cname-check">DNS记录已解析</span>
+					<?php } ?>
+				<?php } ?>
+				<div id="cnameCheck" class="btn btn-mini">检测</div>
+			</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td class="mangage-name" colspan="1">源站</td>
+			<?php
+				$sourceType = array(
+					'1' => '电信',
+					'2' => '联通',
+					'3' => '海外',
+					'4' => 'BGP',
+					'5' => '移动'
+				);
+			?>
+			<td colspan="4">
+				<div class="source-input <?php
+					if(count($source) < 2) echo 'source-mode-simple';
+					else echo 'source-mode-list';
+				?>">
+					<?php 
+						if(isset($source[0])) $sourceSimple = $source[0];
+						else $sourceSimple = false;
+					?>
+					<div class="source-simple <?php
+						if(!$sourceSimple) echo 'source-edit-mode';
+					 ?>">
+						<div class="source-display">
+							<span class="edit-text">
+								<?php 
+									if($sourceSimple) echo $sourceSimple['ip'];
+									if($sourceSimple && $sourceSimple['port'] != 80) echo ":{$sourceSimple['port']}"; 
+									if($sourceSimple && $sourceSimple['type'] != 0){
+										if(isset($sourceType[$sourceSimple['type']])){
+											$text = $sourceType[$sourceSimple['type']];
+											echo " [{$text}]"; 
+										}else{
+											echo ' [未知线路]'; 
+										}
+									}
+								?>
+							</span>
+							<div class="btn btn-mini source-btn source-edit">编辑</div>
+							<div class="btn btn-mini source-btn source-more">更多</div>
+						</div>
+						<div class="form-inline source-edit-block">
+							<input type="text" class="input-medium source-ip" placeholder="IP地址:端口(可选)" value="<?php 
+								if($sourceSimple){
+									echo $sourceSimple['ip']; 
+									if($sourceSimple['port'] != 80) echo ":{$sourceSimple['port']}";
+								}
+							?>">
+						 	<select class="input-mini source-type hide">
+								<option value="0">线路</option>
+								<?php foreach ($sourceType as $key => $svalue) { ?>
+									<option value="<?php echo $key; ?>" 
+										<?php
+									 		if($sourceSimple && $key == $sourceSimple['type']) echo 'selected';
+									 	?> 
+									>
+										<?php echo $svalue; ?>
+									</option>
+								<?php } ?>
+							</select>
+							<div data-loading-text="保存" data-id="<?php 
+									if(!$sourceSimple) echo 0;
+									else echo $sourceSimple['site_source_id'];
+								?>" 
+								class="btn source-save">保存</div>
+							<?php if($sourceSimple){ ?>
+								<div class="btn source-cancel">取消</div>
+							<?php } ?>
+						</div>
+					</div>
+					<ul class="source-list">
+						<?php if(count($source) < 2) $onlyOne = true; else $onlyOne = false; ?>
+						<?php foreach ($source as $key => $value) { ?>
+						<li>
+							<div class="source-display">
+								<span class="edit-text">
+									<?php
+										echo $value['ip'];
+										if($value['port'] != 80) echo ":{$value['port']}"; 
+										if($value['type'] != 0){
+											if(isset($sourceType[$value['type']])){
+												$text = $sourceType[$value['type']];
+												echo " [{$text}]"; 
+											}else{
+												echo ' [未知线路]'; 
+											}
+										}
+									?>
+								</span>
+								<div class="btn btn-mini source-btn source-edit">编辑</div>
+								<?php if(!$onlyOne){ ?>
+									<div data-loading-text="删除" data-id="<?php echo $value['site_source_id']; ?>" class="btn btn-mini source-btn source-del">删除</div>
+								<?php } ?>
+							</div>
+							<div class="form-inline source-edit-block">
+								<input type="text" class="input-medium source-ip" placeholder="IP地址:端口(可选)" value="<?php 
+									echo $value['ip']; 
+									if($value['port'] != 80) echo ":{$value['port']}";
+
+								?>">
+								<select class="input-mini source-type" style="display:none;">
+									<option value="0">线路</option>
+									<?php foreach ($sourceType as $key => $svalue) { ?>
+										<option value="<?php echo $key; ?>" 
+											<?php
+										 		if($key == $value['type']) echo 'selected';
+										 	?> 
+										>
+											<?php echo $svalue; ?>
+										</option>
+									<?php } ?>
+								</select>
+								<div data-loading-text="保存" data-id="<?php echo $value['site_source_id']; ?>" class="btn source-save">保存</div>
+								<div class="btn source-cancel">取消</div>
+							</div>
+						</li>
+						<?php } ?>
+						<li class="new-source">
+							<div class="source-display">
+								<div class="btn btn-mini source-edit">新增</div>
+							</div>
+							<div class="form-inline source-edit-block">
+								<input type="text" class="input-medium source-ip" placeholder="IP地址:端口(可选)">
+								<select class="input-mini source-type" style="display:none;">
+									<option value="0">线路</option>
+									<option value="1">电信</option>
+									<option value="2">联通</option>
+									<option value="3">海外</option>
+									<option value="4">BGP</option>
+									<option value="5">移动</option>
+								</select>
+								<div data-id="0" data-loading-text="保存" class="btn source-save">保存</div>
+								<div class="btn source-cancel">取消</div>
+							</div>
+						</li>
+					</ul>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">其他域名(别名)</td>
+			<td colspan="4" id="mdList" class="<?php
+				$mdomains = explode('|', $siteInfo['multi_domain']);
+				if(empty($siteInfo['multi_domain'])) echo 'mdomain-none';
+				else echo 'mdomain-list';
+			?>"> <!-- mdomain-none mdomain-list mdomain-edit -->
+				<ul class="domain-list">
+					<?php 
+						for ($i=0; $i < count($mdomains); $i++) {
+							echo "<li><span class=\"edit-text\">{$mdomains[$i]}</span><div data-loading-text=\"删除\" data-val=\"{$mdomains[$i]}\"class=\"btn btn-mini alias-del\">删除</div></li>";
+						} 
+					?>
+					<li class="list-new-block">
+						<div class="btn btn-mini list-new">新增</div>
+					</li>
+				</ul>
+				<div class="btn" id="noneNew">
+					新增
+				</div>
+
+				<div class="form-inline multi-domain-input">
+					<input type="text" class="input-medium" id="aliasInput" placeholder="域名">
+					<div class="btn" data-loading-text="保存" id="aliasSave">保存</div>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">站点缓存</td>
+			<td colspan="4">
+				<div class="btn btn-success" id="purgeAll" data-loading-text="清除">清除</div>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">备案号</td>
+			<td colspan="4">
+				<?php if(empty($siteInfo['beian'])){ ?>
+					<div class="btn" id="beianCheck" data-loading-text="备案检测">备案检测</div>
+				<?php }else{
+					echo $siteInfo['beian'];
+				} ?>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1" style="color:#AAA;padding-bottom: 20px;padding-top: 40px;">
+				高级设置
+			</td>
+			<td colspan="4">
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">回源模式</td>
+			<td colspan="4" class="form-inline">
+				<select id="sourceMode" class="input-medium" data-val="<?php echo $siteInfo['source_mode']; ?>">
+					<option value="0" <?php if($siteInfo['source_mode'] == 0) echo 'selected'; ?> >固定源站</option>
+					<option value="1" <?php if($siteInfo['source_mode'] == 1) echo 'selected'; ?> >负载均衡</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">Host</td>
+			<td colspan="4">
+				<div class="span3" style="margin-left:0px;">
+					<textarea id="hostVal" rows="1" style="width:220px;" placeholder="指定回源Host(默认:自动)"><?php
+						if($siteInfo['host'] == 'auto') echo '自动';
+						elseif(empty($siteInfo['host'])) echo '空';
+						else echo $siteInfo['host'];
+					?></textarea>
+				</div>
+				<div class="span1">
+					<div class="btn" id="hostSave" data-loading-text="保存" >保存</div>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">端口</td>
+			<td colspan="4">
+				<div class="port-info">
+					<?php echo $siteInfo['port']; ?>&nbsp;&nbsp;
+					<div class="btn" id="portEdit" data-port="<?php echo $siteInfo['port']; ?>">修改</div>
+				</div>
+				<div class="form-inline port-edit">
+					<input type="text" value="<?php echo $siteInfo['port']; ?>" class="input-small" id="portNum" placeholder="端口">
+					<div class="btn" data-loading-text="保存" id="portSave">保存</div>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td class="mangage-name" colspan="1">代理</td>
+			<td colspan="4" class="form-inline">
+				<select id="proxyMode" class="input-medium" data-val="<?php echo $siteInfo['proxy_limit']; ?>">
+					<option value="-1" <?php if($siteInfo['proxy_limit'] == -1) echo 'selected'; ?> >无限制</option>
+					<option value="0" <?php if($siteInfo['proxy_limit'] == 0) echo 'selected'; ?> >禁止</option>
+					<option value="1" <?php if($siteInfo['proxy_limit'] == 1) echo 'selected'; ?> >允许1层代理</option>
+					<option value="2" <?php if($siteInfo['proxy_limit'] == 2) echo 'selected'; ?> >允许2层代理</option>
+					<option value="3" <?php if($siteInfo['proxy_limit'] == 3) echo 'selected'; ?> >允许3层代理</option>
+					<option value="4" <?php if($siteInfo['proxy_limit'] == 4) echo 'selected'; ?> >允许4层代理</option>
+				</select>
+			</td>
+		</tr>
+	</tbody>
+</table>
+</div>
+<?php } ?>
+<?php if($subpage == 'help'){ ?>
+
+<script>
+	$(document).ready(function(){
+		$(".guide-label").tooltip();
+	});
+</script>
+<div class="site-help bordered-section">
+
+	<?php 
+		$cname = false;
+		$cnameInfo = '';
+		if($siteInfo['cname_type'] == 0){
+			$cnameInfo .= $siteInfo['cname'];
+			if($siteInfo['cname_valid'] == 1){
+				$cname = true;
+				$cnameInfo .= '已经解析';
+			}else $cnameInfo .= '未解析';
+ 		}else{
+ 			$cnameInfo .= $siteInfo['ucname'];
+ 			if($siteInfo['ucname_valid'] == 1){
+ 				$cname = true;
+ 				$cnameInfo .= '已经解析';
+ 			}else $cnameInfo .= '未解析';
+ 		}
+
+ 		$run = false;
+ 		$levels = array();
+ 		foreach ($level as $value){
+ 			if($value['flow_status'] == 1){
+ 				if($value['level_id'] != 0){
+					$get = getLevel($value['level_id']);
+					$levels[] = $get['name'];
+ 				}else $levels[] = '私有节点';
+ 				$run = true;
+ 			}
+ 		}
+ 		$levels = implode('<br/>', $levels);
+
+ 		if($run && $cname) $width = 100;
+ 		elseif($run) $width = 75;
+ 		else $width = 50;
+	?>
+	<div class="site-progress">
+		<div class="progress progress-striped active">
+			<div class="bar" style="width: <?php echo $width; ?>%;"></div>
+		</div>
+	</div>
+	<ul class="site-help-guide">
+		<li>
+			<span class="guide-text">1.添加域名</span>
+			<a href="./site-<?php echo $site_id; ?>">
+				<span class="guide-label label label-success" data-toggle="tooltip" title="<?php echo $siteInfo['domain']; ?>">已完成</span>
+			</a>
+		</li>
+		<li>
+			<?php
+				$sourceIp = array();
+				foreach ($source as $value) {
+					$tmp = $value['ip'];
+					if($value['port'] != 80) $tmp .= ":{$value['port']}";
+					$sourceIp[] = $tmp;
+				}
+				$sourceIp = implode('<br/>', $sourceIp);
+			?>
+			<span class="guide-text">2.设置源站IP</span>
+			<a href="./site-<?php echo $site_id; ?>-manage">
+				<span data-html="true" data-toggle="tooltip" class="guide-label label label-success" title="<?php echo $sourceIp; ?>">已完成</span>
+			</a>
+		</li>
+		<li>
+			<span class="guide-text">3.选择加速套餐</span>
+			<?php if($run){ ?>
+				<a href="./site-<?php echo $site_id; ?>-node">
+					<span class="guide-label label label-success" data-html="true" data-toggle="tooltip" class="guide-label label label-success" title="<?php echo $levels; ?>">已完成</span>
+				</a>
+			<?php }else{ ?>
+				<a href="./site-<?php echo $site_id; ?>-node">
+					<span class="guide-label label label-warning" data-toggle="tooltip" class="guide-label label label-success" title="无套餐">未完成</span>
+				</a>
+			<?php } ?>
+		</li>
+		<li>
+			<span class="guide-text">4.解析CNAME</span>
+			<?php if($cname){ ?>
+				<a href="./site-<?php echo $site_id; ?>-manage">
+					<span class="guide-label label label-success" data-toggle="tooltip" class="guide-label label label-success" title="<?php echo $cnameInfo; ?>">已完成</span>
+				</a>
+			<?php }else{ ?>
+				<a href="./site-<?php echo $site_id; ?>-manage">
+					<span class="guide-label label label-warning" data-toggle="tooltip" class="guide-label label label-success" title="<?php echo $cnameInfo; ?>">未完成</span>
+				</a>
+			<?php } ?>
+		</li>
+	</ul>
+</div>
+<?php } ?>
+<?php if($subpage == 'cache'){ ?>
+<script>
+	$(document).ready(function(){
+
+		$(".cache-rule-content").tooltip();
+
+		function initTag(tags){
+			if(!arguments[0]) tags = false;
+
+			newTag = $("#ruleTag").clone();
+			$("#ruleTag").parents(".text-core").remove();
+			$("#ruleTag").remove();
+			$(".rule-tag").append(newTag);
+
+			textdata = {plugins : 'tags autocomplete'};
+			if(tags != false) textdata['tagsItems'] = tags;
+			// console.log(textdata);
+			$('#ruleTag').textext(textdata).bind('getSuggestions', function(e, data){
+				var list = ['php','asp','jpg','jpeg','txt','png','gif','aspx'],
+					textext = $(e.target).textext()[0],
+					query = (data ? data.query : '') || '';
+
+				$(this).trigger('setSuggestions',{result: textext.itemManager().filter(list, query)});
+	        });
+		}
+		initTag();
+
+		$('#cacheTime').textext({
+            plugins : 'arrow autocomplete'
+        }).bind('getSuggestions', function(e, data){
+			var list = ['不缓存','智能缓存','1分钟','30分钟','1小时','永久'],
+				textext = $(e.target).textext()[0],
+				query = (data ? data.query : '') || '';
+
+			$(this).trigger('setSuggestions',{result: textext.itemManager().filter(list, query)});
+        });
+
+		$("#matchType").change(function(){
+			if($(this).val() == 0){
+				$(".rule-input").show();
+				$(".rule-tag").hide();
+			}else{
+				$(".rule-input").hide();
+				$(".rule-tag").show();
+				// initTag();		
+			}
+		});
+
+		$("#cacheMode").change(function(){
+			$.post('./active/site.cache', {site_id: <?php echo $site_id; ?>, mode: $(this).val()}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$("#ruleAdd").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			type = $("#matchType").val();
+			if(type == 0) rule = $("#ruleInput").val();
+			else {
+				invalue = $("#ruleTag").siblings("input[type='hidden']").val();
+				if(invalue == "[]"){
+					rule = $("#ruleTag").val().replace(/,/g, "|").replace(/ /g, "|");
+				}else{
+					tag = eval(invalue);
+					rule = tag.join('|');
+				}
+			}
+			cacheTime = $("#cacheTime").val();
+			keep_time = 0;
+
+			if(cacheTime == '永久') keep_time = -2;
+			else if(cacheTime == '智能缓存') keep_time = -1;
+			else if(cacheTime.indexOf("分钟") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("分钟"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60;	
+			}else if(cacheTime.indexOf("小时") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("小时"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60 * 60;		
+			}else if(cacheTime.indexOf("天") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("天"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60 * 60 * 24;		
+			}
+
+			$.post('./active/site.pattern.add', {site_id: $("#site_id").val(), type: type, keep_time: keep_time, rule:rule}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".rule-edit").click(function(){
+			$(".cache-submit").removeClass("mode-add").addClass("mode-edit");
+			$("#cacheTime").val($(this).attr("data-time"));
+			$("#matchType").val($(this).attr("data-type")).change();
+			$("#pattern_id").val($(this).attr('data-id'));
+			if($(this).attr("data-type") == 0){
+				$("#ruleInput").val($(this).attr("data-rule"));
+			}else{
+				tags = $(this).attr("data-rule").split("|");
+				initTag(tags);
+			}
+		});
+
+		$("#ruleEditPost").click(function(){
+
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			type = $("#matchType").val();
+			if(type == 0) rule = $("#ruleInput").val();
+			else {
+				tag = eval($("#ruleTag").siblings("input[type='hidden']").val());
+				rule = tag.join('|');
+			}
+			cacheTime = $("#cacheTime").val();
+			keep_time = 0;
+
+			if(cacheTime == '永久') keep_time = -2;
+			else if(cacheTime == '智能缓存') keep_time = -1;
+			else if(cacheTime.indexOf("分钟") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("分钟"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60;	
+			}else if(cacheTime.indexOf("小时") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("小时"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60 * 60;		
+			}else if(cacheTime.indexOf("天") > 0){
+				cacheTime = cacheTime.substr(0, cacheTime.indexOf("天"));
+				cacheTime = parseInt(cacheTime);
+				if(cacheTime > 0) keep_time = cacheTime * 60 * 60 * 24;		
+			}
+
+			$.post('./active/site.pattern.modify', {pattern_id: $("#pattern_id").val(), type: type, keep_time: keep_time, rule:rule}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});			
+		});
+
+		$(".cache-up,.cache-down").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.addClass('disabled');
+			if($(this).hasClass("cache-up")) move = 0;
+			else move = 1;
+
+			$.post('./active/site.pattern.move', {pattern_id: btn.attr("data-id"), move: move}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.removeClass('disabled');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".rule-del").click(function(){
+			if($(this).hasClass("disabled")) return;
+			if(!confirm('请确认删除该条缓存规则')) return;
+			
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.pattern.del', {pattern_id: btn.attr("data-id")}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+	});
+</script>
+<div class="site-cache bordered-section">
+	<div class="cache-rules <?php if($siteInfo['cache_mode'] != 0) echo 'rule-lock';?>">
+		<form class="form-inline cache-mode">
+			<div class="pull-right">
+				缓存模式
+				<select class="input-small" id="cacheMode">
+					<option value="0" <?php if($siteInfo['cache_mode'] == 0) echo 'selected'; ?> >自定义</option>
+					<option value="1" <?php if($siteInfo['cache_mode'] == 1) echo 'selected'; ?> >自动缓存</option>
+					<option value="2" <?php if($siteInfo['cache_mode'] == 2) echo 'selected'; ?> >无缓存</option>
+				</select>
+			</div>
+		</form>
+		<div class="cache-help">
+			选择合适的缓存模式能够大大提升网站的访问速度和减轻源站的负载。对于普通站点，我们推荐【自动缓存】模式，对于无缓存需求的用户，我们推荐【无缓存】模式。如果以上两种模式仍不能满足需求，您可以通过【自定义】模式来定制自己的缓存规则来适应自己的网站。
+		</div>
+		<?php 
+		if($siteInfo['cache_mode'] != 0){
+			$list = $tmpl[$siteInfo['cache_mode']];
+		} 
+		?>
+		<?php foreach ($list as $value) { ?>
+		<?php
+			if($value['type'] == 0) $rule = $value['rule'];
+			else $rule = str_replace('|', ',', $value['rule']);
+		?>
+		<div class="cache-rule-ele">
+			<div class="cache-order">
+				<div class="btn cache-up" data-id="<?php echo $value['site_pattern_id']; ?>">
+					<div class="order-up"></div>
+				</div>
+				<div class="clear"></div>
+				<div class="btn cache-down" data-id="<?php echo $value['site_pattern_id']; ?>">
+					<div class="order-down"></div>
+				</div>
+			</div>
+			<div class="cache-content">
+				<h4 class="cache-rule-content" data-toggle="tooltip" title="<?php if($value['type'] == 0) echo '路径: '; else echo '后缀: '; ?><?php echo $rule; ?>">
+					<?php echo $rule; ?>
+				</h4>
+				<div class="cache-rule-time">缓存时间:
+					<?php 
+						$keep_time = '';
+						if($value['keep_time'] == -1){
+							$keep_time = '智能缓存';
+						}elseif($value['keep_time'] < 0){
+							$keep_time = '永久';
+						}elseif($value['keep_time'] == 0){
+							$keep_time = '不缓存';
+						}else{
+							$keep_time = $value['keep_time'] / 60 . '分钟';
+						}
+						echo $keep_time;
+					?>
+				</div>
+			</div>
+			<div class="cache-edit">
+				<div class="btn rule-del" data-loading-text="删除" data-id="<?php echo $value['site_pattern_id']; ?>">删除</div>
+				<div class="btn rule-edit" data-type="<?php echo $value['type']; ?>" data-rule="<?php echo $value['rule']; ?>" data-id="<?php echo $value['site_pattern_id']; ?>" data-time="<?php echo $keep_time; ?>">编辑</div>
+			</div>
+		</div>
+		<?php } ?>
+	</div>
+	<?php if($siteInfo['cache_mode'] == 0){ ?>
+	<div class="ribbon row">
+		<div class="span2">
+			<h4 class="match">匹配</h4>
+			<select class="input-small" id="matchType">
+				<option value="0">路径</option>
+				<option value="1">文件后缀</option>
+			</select>
+		</div>
+		<div class="span7 rule-input">
+			<input class="input-block-level" type="text" id="ruleInput">
+		</div>
+		<div class="span7 rule-tag" style="display:none;">
+			<textarea id="ruleTag" rows="1" style="width:540px;"></textarea>
+		</div>
+		<div class="span1">
+			<textarea id="cacheTime" rows="1" style="width:75px;" placeholder="缓存时间"></textarea>
+		</div>
+		<div class="span1 cache-submit mode-add">
+			<div class="btn btn-info" id="ruleAdd" data-loading-text="添加">添加</div>
+			<div class="btn btn-info" id="ruleEditPost" data-loading-text="保存">保存</div>
+			<input value="" type="hidden" id="pattern_id"/>
+		</div>
+	</div>
+	<div class="ribbon-shadow-l"></div>
+	<div class="ribbon-shadow-r"></div>
+	<?php } ?>
+	<div><br/></div>
+</div>
+<?php } ?>
+<?php if($subpage == 'node'){ ?>
+<script>
+	$(document).ready(function(){
+
+		$(".traffic-trigger").click(function(){
+			$(this).parent().parent().addClass("node-edit-trigger");
+		});
+
+		$(".traffic-limit").click(function(){
+			$(this).parent().parent().addClass("node-edit-limit");
+		});
+
+		$(".attr-cancle").click(function(){
+			$(this).parent().parent().removeClass("node-edit-limit").removeClass("node-edit-trigger");
+		});
+
+		$(".limit-apply").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			var limit = btn.siblings(".limit-val").val();
+			if(limit == "") limit = 0;
+
+			//判断是否要confirm
+			oldType = btn.siblings(".limit-type").children("option[selected]").val();
+			// console.log(btn.siblings(".limit-type").children("option[selected='']"));
+			newType = btn.siblings(".limit-type").val();
+			if(oldType != newType || limit == 0){
+				if(!confirm('该操作将清空之前的计数,请确认')){
+					btn.button('reset');
+					return;
+				}
+			}
+
+			$.post('./active/site.level.limit', {site_id: <?php echo $site_id; ?>, level_id: $(this).attr("data-id"), type: newType, limit: limit}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+		$(".trigger-apply").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			var trigger = btn.siblings(".trigger-val").val();
+			if(trigger == "") trigger = 0;
+
+			$.post('./active/site.level.trigger', {site_id: <?php echo $site_id; ?>, level_id: $(this).attr("data-id"), trigger: trigger}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+
+
+		$(".level-on").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			level_id = $(this).attr("data-id");
+
+			$.post('./active/site.level', {site_id: <?php echo $site_id; ?>, level_id: level_id, method: 'on'}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg, function(){
+						window.location.href = "#nodeLevel"+level_id;
+						window.location.reload();
+					});
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});			
+		});
+
+		$(".level-off").click(function(){
+			if(!confirm('本操作将停用本套餐，请确认')) return ;
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/site.level', {site_id: <?php echo $site_id; ?>, level_id: $(this).attr("data-id"), method: 'off'}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});			
+		});
+
+		$(".node-mode-select").change(function(){
+			if($(this).val() == 0){		//自动
+				//直接发包改自动
+				var select = $(this);
+				if(select.attr("data-val") == 0){	//原来就是自动，不更改
+ 					var list = $(this).parents(".node-info").siblings(".node-list");
+					list.removeClass("select-mode");
+					$(this).parent().removeClass("node-edit-save");	
+					return;					
+				}
+
+				$.post('./active/site.level.node', {site_id: <?php echo $site_id; ?>, level_id: $(this).attr("data-id"), select_mode: 0}, function(data){
+					var data = $.parseJSON(data);
+					if(data.result){
+						successInfo(data.msg);
+					}else{
+						//失败后回滚
+						$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+						select.val(1);
+					}
+				});
+
+			}else{		//手动
+				//直接进入修改模式
+				var list = $(this).parents(".node-info").siblings(".node-list");
+				list.addClass("select-mode");
+				$(this).parent().addClass("node-edit-save");
+			}
+		});
+
+		$(".select-node").click(function(){
+			var list = $(this).parents(".node-info").siblings(".node-list");
+			list.addClass("select-mode");
+			//进入修改模式
+			$(this).parent().addClass("node-edit-save").removeClass("node-edit-select");
+		});
+
+		$(".node-list-ele").on('click', function(){
+			if(!$(this).parent().hasClass("select-mode")) return;
+			if($(this).hasClass("selected")) $(this).removeClass("selected");
+			else $(this).addClass("selected");
+		});
+
+		$(".save-node").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			var node = [];
+			selected = $(this).parent().parent().siblings(".node-list").children("li.selected");
+
+			$.each(selected, function(i, n){
+				id = $(n).attr("data-id");
+				node.push(id);
+			});
+
+			if(node.length == 0){
+				alert('请选择节点');
+				btn.button('reset');
+				return;
+			}
+
+			node_select = node.join("|");
+
+			$.post('./active/site.level.node', {site_id: <?php echo $site_id; ?>, level_id: $(this).attr("data-id"), node_select: node_select, select_mode: 1, pgroup: $(this).attr("data-pgroup")}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});	
+
+		});
+
+		$(".level-switch").click(function(){
+			href = $(this).attr("href");
+			setTimeout(function(){
+				if($(".accordion-body").hasClass("in")) window.location.href = href;
+				else window.location.href = "#";
+			},100);
+		});
+
+		$(".select-group").change(function(){
+			if($(this).val() == 0) return;
+			pid = $(this).val();
+			self = $(this);
+
+			$.post('./active/site.privateGroup', {pgroup_id: pid}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					// console.log(data.data);
+					inNode = [];
+					for(key in data.data) inNode.push(data.data[key].node_id);
+
+					// console.log(inNode);
+
+					nodes = self.parents(".node-info").siblings(".node-list").children(".node-list-ele");
+
+					$.each(nodes, function(i, n){
+						if($.inArray($(n).attr("data-id"), inNode) >= 0) $(n).addClass("selected");
+						else $(n).removeClass("selected");
+					});
+
+					self.siblings(".save-node").attr("data-pgroup", pid);
+
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+				}
+			});
+		});
+
+			
+		$(window.location.hash).addClass("in");
+		
+
+	});
+</script>
+<div class="site-node bordered-section">
+	<div class="node-intro">
+		这里汇聚了所有可用的加速节点，他们被分成各种类型的套餐，根据您剩余的套餐流量选择合适的套餐，即使套餐流量耗尽您也不必担心你的网站会无法访问，我们会自动将DNS切回您的源站。
+	</div>
+	<div class="accordion" id="nodeTab">
+		<?php $first = true; ?>
+		<?php foreach ($level as $value) { ?>
+		<div class="accordion-group">
+			<div class="accordion-heading <?php 
+						
+					if(isset($value['level'])){
+						if($value['level']['status'] == 0){
+							echo ' node-level-on';
+							if($value['level']['flow_status'] == 0){
+								echo ' node-level-warn';
+							}
+						}else{
+							echo ' node-level-off';
+						}
+					}else echo 'node-level-off'; 	//正常关闭
+
+					?>">
+				<h4 class="node-level-name level-switch ya" data-toggle="collapse" data-parent="#nodeTab" href="#nodeLevel<?php echo $value['level_id']; ?>">
+					<?php echo $value['name']; ?>
+					<?php 
+						if(isset($value['beian'])){
+							if($value['beian']) echo '【需备案】'; 
+							else echo '【免备案】';
+						} 
+					?>
+					&nbsp;
+					<?php if(isset($value['info'])){ ?>
+						<?php
+							// $left = sprintf("%.3f", (float)$value['info']['value']);
+							$left = bitShow($value['info']['value'], 3, false);
+							echo "(剩余流量{$left})";
+						 ?>
+					<?php } ?>
+				</h4>
+				<div class="stop-info">
+					<?php 
+						if(isset($value['level']) && $value['level']['status'] == 0 && $value['level']['flow_status'] == 0 && !empty($value['level']['stop_info'])){
+							echo "已暂停(原因:{$value['level']['stop_info']})";
+						}else echo '已暂停(原因:暂无)';
+					?>
+				</div>
+				<div class="node-limit">
+					<div class="node-on">
+						<div class="level-limit level-switch" data-toggle="collapse" data-parent="#nodeTab" href="#nodeLevel<?php echo $value['level_id']; ?>">
+							<?php 
+							if(isset($value['level'])){
+								if($value['level']['flow_limit'] == 0) echo '流量未限制';
+								else{
+									if($value['level']['flow_trigger'] != 0){
+										$trigger = (float) $value['level']['flow_trigger'];
+										echo "[当带宽大于{$trigger}Mbps时启用] ";
+									}
+
+									if($value['level']['flow_mode'] == 0) echo '累计';
+									else echo '每月';
+
+									// $flow_limit = (float)$value['level']['flow_limit'];
+									// $flow_use = (float)$value['level']['flow_use'];
+									// $flow_use = sprintf("%6f", $value['level']['flow_use']);
+									$flow_limit = bitShow($value['level']['flow_limit'], 3, false);
+									$flow_use = bitShow($value['level']['flow_use'], 3, false);
+									echo "{$flow_limit}";
+									echo "/已用{$flow_use}";
+								}
+							}
+							 ?>
+						</div>
+						<div class="btn level-switch" data-toggle="collapse" data-parent="#nodeTab" href="#nodeLevel<?php echo $value['level_id']; ?>">详细</div>
+						<div class="btn level-off btn-warning" data-loading-text="停用" data-id="<?php echo $value['level_id']; ?>">停用</div>
+					</div>
+					<div class="node-off">
+						<div class="btn" data-toggle="collapse" data-parent="#nodeTab" href="#nodeLevel<?php echo $value['level_id']; ?>">详细</div>
+						<div class="btn level-on" data-loading-text="启用" data-id="<?php echo $value['level_id']; ?>">启用</div>
+					</div>
+				</div>
+			</div>
+			<div id="nodeLevel<?php echo $value['level_id']; ?>" class="accordion-body collapse <?php if($first){ /*echo 'in';*/ $first = false;} ?>">
+				<div class="accordion-inner">
+					<ul class="node-list  <?php if(isset($value['level']) && $value['level']['node_mode'] == 1) echo 'select-mode'; ?>" >
+						<?php foreach ($value['nodes'] as $node) { ?>
+							<?php 
+								$nodeS = '';
+								if(isset($node['site']) && $node['site']['remove'] == 0){
+									$nodeS = ' selected';
+								}
+							?>
+							<li class="node-list-ele <?php echo $nodeS; ?>" data-id="<?php echo $node['node_id']; ?>" >
+								<?php if(!empty($node['img'])){ ?>
+									<img class="node-img" src="<?php echo $node['img']; ?>"/>
+								<?php }else{ ?>
+									<img class="node-img" src="./assets/images/cloud.png"/>
+								<?php } ?>
+								<div class="node-about">
+									<div class="node-ip"><?php echo $node['ip']; ?></div>
+									<div class="node-location"><br/></div>
+									<div class="node-info">
+										<?php 
+											if(isset($node['site'])){
+												$siteNode = $node['site'];
+												// var_dump($siteNode);
+												if($siteNode['remove'] == 1){
+													echo '<span class="label">删除中</span>';
+												}elseif($siteNode['server_pause'] == 1){
+													echo '<span class="label label-important">故障</span>';
+												}elseif($siteNode['level_pause'] == 1){
+													echo '<span class="label label-warning">暂停</span>';
+												}elseif($siteNode['cloudflare_id'] == 0 && $siteNode['dnspod_id'] == 0 && $siteNode['status'] == 1){
+													echo '<span class="label">DNS生效中</span>';
+												}elseif($siteNode['conf_status'] != 2 || $siteNode['status'] != 1){
+													if($siteNode['conf_sync'] > 2) echo '<span class="label">配置文件异常</span>';
+													else echo '<span class="label">配置生效中</span>';
+												}else{
+													echo '<span class="label label-success">正常</span>';
+												}
+											}
+										?>
+									</div>
+								</div>
+								<div class="select-ok">
+									<!-- <span class="icon-ok icon-white"></span> -->
+									已启用
+								</div>
+							</li>
+						<?php } ?>
+						<?php if(count($value['nodes']) == 0) echo '暂无节点'; ?>
+					</ul>
+					<?php if(count($value['nodes']) > 0){ ?>
+					<div class="node-info">
+						<div class="node-mode form-inline <?php if(isset($value['level']) && $value['level']['node_mode'] == 1) echo 'node-edit-save'; ?>">
+							分配模式&nbsp;
+							<select class="input-small node-mode-select" data-id="<?php echo $value['level_id']; ?>" data-val="<?php if(isset($value['level'])) echo $value['level']['node_mode']; ?>">
+								<option value="0" <?php if(isset($value['level']) && $value['level']['node_mode'] == 0) echo 'selected'; ?> >自动</option>
+								<option value="1" <?php if(isset($value['level']) && $value['level']['node_mode'] == 1) echo 'selected'; ?> >手动</option>
+							</select>
+							<div class="btn select-node">选择节点</div>
+							<div class="btn save-node btn-success" data-loading-text="保存" data-id="<?php echo $value['level_id']; ?>" data-pgroup="0">保存</div>
+							<?php if($value['level_id'] == 0 && isset($groups)){ ?>
+								<select class="btn select-group input-medium">
+									<option value="0">
+										选择节点组
+									</option>
+									<?php foreach ($groups as $group) { ?>
+										<?php
+											$selected = '';
+											if($value['level']['private_group'] > 0 && $value['level']['private_group'] == $group['pgroup_id']){
+												$selected = ' selected';
+											}
+
+											echo "<option {$selected} value=\"{$group['pgroup_id']}\">{$group['name']}({$group['node_count']})</option>";
+										?>
+									<?php } ?>
+								</select>
+							<?php } ?>
+						</div>
+						<?php if(isset($value['level']) && $value['level']['status'] == 0){ ?>
+						<div class="clear"></div>
+						<div class="node-footer">
+							<div class="node-attr">
+								<div class="btn traffic-trigger">启用条件</div>
+								<div class="btn traffic-limit">流量限制</div>
+							</div>
+							<div class="node-attr-trigger form-inline">
+								当带宽大于该值(Mbps)时，套餐才会消耗流量（默认为自动启用）&nbsp;&nbsp;
+								<input type="text" class="input-small trigger-val" placeholder="带宽(Mbps)" value="<?php if(isset($value['level']) && $value['level']['flow_trigger'] !=0) echo (float)$value['level']['flow_trigger']; ?>">
+								<div class="btn trigger-apply" data-loading-text="应用" data-id="<?php echo $value['level_id']; ?>">应用</div>
+								<div class="btn attr-cancle" >取消</div>
+							</div>
+							<div class="node-attr-limit form-inline">
+								用于限制本站点的消耗流量（默认为不限制）&nbsp;&nbsp;
+								<select class="input-small limit-type">
+									<option value="1" <?php if(isset($value['level']) && $value['level']['flow_mode'] != 0) echo 'selected'; ?> >每月(GB)</option>
+									<option value="0" <?php if(isset($value['level']) && $value['level']['flow_mode'] == 0) echo 'selected'; ?> >累计(GB)</option>
+								</select>
+								<input type="text" class="input-small limit-val" placeholder="流量(GB)" value="<?php if(isset($value['level']) && $value['level']['flow_limit'] !=0) echo (float)$value['level']['flow_limit']; ?>">
+								<div class="btn limit-apply" data-loading-text="应用" data-id="<?php echo $value['level_id']; ?>">应用</div>
+								<div class="btn attr-cancle" >取消</div>
+							</div>
+						</div>
+						<?php } ?>
+					</div>
+					<?php } ?>
+				</div>
+			</div>
+		</div>
+		<?php } ?>
+	</div>
+</div>
+<?php } ?>

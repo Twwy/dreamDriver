@@ -1,0 +1,17 @@
+<div class="user-flow bordered-section">
+	<?php foreach ($level as $key => $value) { ?>
+	<div class="flow-ele">
+		<h3 class="level-name"><?php echo $value['name']; ?></h3>
+		<h3 class="flow-count">
+			<?php 
+				// $left = sprintf("%6f", $value['info']['value']); 
+				$left = bitShow($value['info']['value'], 3);
+			?>
+			剩余<?php echo $left; ?>
+		</h3>
+		<div class="flow-operation">
+			<a href="./exchange-<?php echo $value['level_id']; ?>-" class="btn">兑换流量</a>
+		</div>
+	</div>
+	<?php } ?>
+</div>

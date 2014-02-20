@@ -1,0 +1,371 @@
+<input type="hidden" id="site_id" value="<?php echo $node_id; ?>">
+<div class="node-nav">
+	<h3 class="pull-left ip ya">
+		<?php 
+			if(empty($nodeInfo['remark'])) echo $nodeInfo['ip']; 
+			else echo $nodeInfo['remark'];
+		?>
+	</h3>
+	<div class="pull-right node-nav-link ya">
+		<a href="./node-<?php echo $node_id; ?>" <?php if($subpage == 'about') echo 'class="active"';?> >节点信息</a>&nbsp;
+		<a href="./node-<?php echo $node_id; ?>-setting" <?php if($subpage == 'setting') echo 'class="active"';?>>节点设置</a>
+	</div>
+</div>
+<?php if($subpage == 'about'){ ?>
+<script>
+	$(document).ready(function(){
+
+		<?php if($nodeInfo['power'] == 1){ ?>
+			var time = 1000;
+		<?php }else{ ?>
+			var time = 10000;
+		<?php } ?>
+
+		// setInterval(function(){
+		// 	node();
+		// }, time);
+
+		function node(){
+			$.post('./active/node.info', {node_id: <?php echo $node_id; ?>}, function(data){
+				data = $.parseJSON(data);
+				if(data.result){
+					data = data.data;
+
+					memory_text = data.memory_data;
+					if(typeof(data.memory_used) != "undefined"){
+						memory_text += " (" + data.memory_used.replace("Byte", "B") + "/" + data.memory_total.replace("Byte", "B") + ")";
+					}
+
+					var memory = parseFloat(data.memory_data);
+					if(memory > 100) memory = 100;
+					var lmemory = 100 - memory;
+					$("#memory").css({width: memory + "%"});
+					$("#lmemory").css({width: lmemory + "%"});
+					$("#memory").siblings(".node-per-count").text(memory_text);
+
+					var cpu = parseFloat(data.cpu_data);
+					if(cpu > 100) cpu = 100;
+					var lcpu = 100 - cpu;
+					$("#cpu").css({width: cpu + "%"});
+					$("#lcpu").css({width: lcpu + "%"});
+					$("#cpu").siblings(".node-per-count").text(data.cpu_data);
+
+					for(key in data.network){
+						if(key == "lo") continue;
+
+						nin = $(".network-in")
+
+						findin = false;
+						$.each($(".network-in"), function(i, n){
+							if($(n).children(".network-name").text() == key){
+								findin = $(n);
+								findout = $(n).next();
+							}
+						});
+
+						if(findin === false){
+							tmpl = $(".network-in").eq(0);
+							findin = tmpl.clone();
+							findout = tmpl.next().clone();
+							findin.children(".network-name").text(key);
+							$(".networks").append(findin);
+							$(".networks").append(findout);
+							if($.trim(tmpl.children(".network-name").text()) == "暂无"){
+								tmpl.next().remove();
+								tmpl.remove();
+							}
+						}
+						
+						findin.children(".btotal").text(data.network[key]['count']['receive-bytes'].replace("Byte", "B"));
+						findin.children(".speed").text(data.network[key]['count']['receive-bytes-speed']);
+
+						findout.children(".btotal").text(data.network[key]['count']['transmit-bytes'].replace("Byte", "B"));
+						findout.children(".speed").text(data.network[key]['count']['transmit-bytes-speed']);
+
+					}
+
+				}else time = 20000;
+			});
+		}
+
+		function timer(){
+			node();
+			setTimeout(function(){timer()}, time);
+		}
+
+		<?php if($nodeInfo['power'] == 1){ ?>
+			node();
+		<?php } ?>
+		timer();
+
+	});
+</script>
+<div class="node-page-about bordered-section">
+	<table width="100%" border="0" class="table" cellspacing="0">
+		<thead>
+			<tr>
+				<th colspan="1" class="info-attr">节点状态</th>
+				<th colspan="4">
+					<?php
+						if($nodeInfo['access'] == 1) echo "<span class=\"label label-success\">正常</span>";
+						elseif($nodeInfo['power'] == 1) echo "<span class=\"label label-warning\">无权限</span>";
+						else echo "<span class=\"label label-important\">未启动</span>";
+					?>
+				</th>
+			</tr>
+		</thead>
+	<tbody>
+		<tr>
+			<td colspan="1" class="info-attr">套餐状态</td>
+			<td colspan="4">
+				<?php 
+					if($nodeInfo['level_id'] == 0) echo '私有'; 
+					else{
+						$tmp = getLevel($nodeInfo['level_id']);
+						echo $tmp['name'];
+					}
+				?>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr">节点IP</td>
+			<td colspan="4">
+				<?php echo $nodeInfo['ip']; ?>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr">操作系统</td>
+			<td colspan="4">
+				<?php echo $nodeInfo['os']; ?>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr"s>内核版本</td>
+			<td colspan="4">
+				<?php echo $nodeInfo['kernel']; ?>	
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr">CPU使用</td>
+			<td colspan="4">
+				<?php if(!empty($nodeInfo['cpu_data'])){ ?>
+				<div class="progress">
+					<div class="node-per-count"><?php echo $nodeInfo['cpu_data']; ?></div>
+						<?php 
+							$cpu = (int)str_replace('%', '', $nodeInfo['cpu_data']);
+							if($cpu > 100) $cpu = 100;
+							elseif($cpu < 0) $cpu = 0;
+							$left = 100 - $cpu;
+							echo "<div id=\"cpu\" class=\"bar bar-danger\" style=\"width: {$cpu}%;\"></div>";
+							echo "<div id=\"lcpu\" class=\"bar bar-success\" style=\"width: {$left}%;\"></div>";
+						?>
+				</div>
+				<?php } ?>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr">内存使用</td>
+			<td colspan="4">
+				<?php if(!empty($nodeInfo['memory_data'])){ ?>
+				<div class="progress">
+					<div class="node-per-count"><?php echo $nodeInfo['memory_data']; ?></div>
+						<?php 
+							$memory = (int)str_replace('%', '', $nodeInfo['memory_data']);
+							if($memory > 100) $memory = 100;
+							elseif($memory < 0) $memory = 0;
+							$left = 100 - $memory;
+							echo "<div id=\"memory\" class=\"bar bar-danger\" style=\"width: {$memory}%;\"></div>";
+							echo "<div id=\"lmemory\" class=\"bar bar-success\" style=\"width: {$left}%;\"></div>";
+						?>
+				</div>
+				<?php } ?>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="1" class="info-attr">网卡</td>
+			<td colspan="4">
+				<table class="network-table table-bordered" width="100%" border="0" class="table" cellspacing="0">
+					<thead>
+						<tr>
+							<th colspan="2">网卡</th>
+							<th colspan="1">流入/流出</th>
+							<th colspan="2">总流量</th>
+							<th colspan="2">实时速率</th>
+						</tr>
+					</thead>
+					<tbody class="networks">
+						<tr class="network-in">
+							<td rowspan="2" colspan="2" class="network-name">
+								暂无
+							</td>
+							<td colspan="1">流入</td>
+							<td colspan="2" class="btotal">暂无</td>
+							<td colspan="2" class="speed">暂无</td>
+						</tr>
+						<tr class="network-out">
+							<td colspan="1">流出</td>
+							<td colspan="2" class="btotal">暂无</td>
+							<td colspan="2" class="speed">暂无</td>
+						</tr>
+					</tbody>
+				</table>
+			</td>
+		</tr>
+	</tbody>
+</table>
+</div>
+<?php } ?>
+<?php if($subpage == 'setting'){ ?>
+<script>
+	$(document).ready(function(){
+		$("#saveToken").click(function(){
+			token = $("#token").val();
+			if(token == "opencdn" || token == "") return;
+
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/node.token', {node_id: <?php echo $node_id; ?>, token: token}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});	
+		});
+
+		<?php
+
+		$tags = array();
+		$wGroups = array();
+
+		foreach ($nowGroups as $value) $tags[] = "'{$value['name']}'";
+
+		foreach ($totalGroups as $value) $wGroups[] = "'{$value['name']}'";
+
+		?>
+
+		tags = [<?php echo implode(',', $tags); ?>];
+
+		textdata = {plugins : 'tags arrow autocomplete'};
+		if(tags.length > 0) textdata['tagsItems'] = tags;
+
+		$('#nodepGroup').textext(textdata).bind('getSuggestions', function(e, data){
+			var wholeGroups = [<?php echo implode(',', $wGroups); ?>];
+				textext = $(e.target).textext()[0];
+				query = (data ? data.query : '') || '';
+
+			$(this).trigger('setSuggestions',{result: textext.itemManager().filter(wholeGroups, query)});
+		});
+
+		$("#nodepGroupSave").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			groups = eval($("#nodepGroup").siblings("input[type='hidden']").val());
+			if(groups.length > 0) groups = groups.join(',');
+			else{
+				groups = $("#nodepGroup").val(); 
+			}
+
+			$.post('./active/node.group', {node_id: <?php echo $node_id; ?>, group: groups}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+
+		});
+
+		$("#clientUpdate").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+
+			$.post('./active/node.upgrade', {node_id: <?php echo $node_id; ?>}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					successInfo(data.msg);
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+
+		});
+
+	});
+</script>
+<div class="node-setting bordered-section">
+	<table width="100%" border="0" class="table" cellspacing="0">
+		<thead>
+			<tr>
+				<th colspan="1" class="info-attr">Token</th>
+				<th colspan="4">
+					<?php if($nodeInfo['access'] == 0){ ?>
+						<div class="form-inline">
+							<input id="token" type="password" placeholder="32位字符" value="opencdn"/>
+							<div class="btn" id="saveToken" data-loading-text="保存">保存</div>
+						</div>
+					<?php }else{ ?>
+						<div class="btn disabled">已授权</div>
+					<?php } ?>
+				</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td colspan="1" class="info-attr">CDN节点版本</td>
+				<td colspan="4">
+					<?php echo $nodeInfo['lua_ver']; ?>
+					<?php if($nodeInfo['lua_ver'] < lua_ver()){ ?>
+						<div class="btn btn-success" id="clientUpdate">更新至<?php echo lua_ver(); ?></div>
+					<?php }else{ ?>
+						<div class="btn" id="clientUpdate">版本重置</div>
+					<?php } ?>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="1" class="info-attr">地理位置</td>
+				<td colspan="4">
+					--
+				</td>
+			</tr>
+			<tr>
+				<td colspan="1" class="info-attr">套餐</td>
+				<td colspan="4">
+					<select class="input-small" id="beian">
+						<option value="1">需备案</option>
+						<option value="0">无需备案</option>
+					</select>
+				</td>
+			</tr>
+			<?php if($nodeInfo['level_id'] == 0){ ?>
+				<tr>
+					<td colspan="1" class="info-attr">私有节点组</td>
+					<td colspan="4">
+						<div class="group-list">
+							<textarea id="nodepGroup" rows="1" style="width:300px;"></textarea>
+						</div>
+						<div id="nodepGroupSave" class="group-save btn" data-loading-text="保存">保存</div>
+						<a href="./node-private-group" class="btn">查看全部</a>
+					</td>
+				</tr>
+			<?php } ?>
+		</tbody>
+	</table>
+</div>
+<?php } ?>

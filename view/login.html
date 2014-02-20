@@ -1,0 +1,64 @@
+<script>
+	$(document).ready(function(){
+		$(document).keydown(function(event){
+			if (event.keyCode == 13) $("#postLogin").click();
+		});
+
+		$("#postLogin").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			$.post('./active/user.login', {mail: $("#inputEmail").val(), pass: $("#inputPassword").val()}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					$.globalMessenger().post({
+						message: data.msg, 
+						type:"success", 
+						showCloseButton: true,
+						actions: {
+							enter: {
+								label: "直接进入",
+								phrase: '跳转首页(TIME)',
+								auto: true,
+								delay: 2,
+								action: function() {
+									window.location.href = "./main";
+								}							
+							}
+						},
+						id: "login"
+					});
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true, id: "login"});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+	});
+</script>
+<div class="user-enter">
+	<div class="swin win-center">
+		<form class="form-horizontal">
+			<div class="control-group">
+				<label class="control-label" for="inputEmail">帐号</label>
+				<div class="controls">
+					<input type="text" id="inputEmail" placeholder="邮箱">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="inputPassword">密码</label>
+				<div class="controls">
+					<input type="password" id="inputPassword" placeholder="6位以上字符">
+				</div>
+			</div>
+			<div class="form-actions">
+				<div class="pull-right">
+					<a href="./reg" class="btn btn-info">注册</a>&nbsp;
+					<div data-loading-text="登录中" id="postLogin"class="btn btn-info">马上登录</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>

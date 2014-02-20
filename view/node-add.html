@@ -1,0 +1,49 @@
+<script>
+	$(document).ready(function(){
+
+		$("#nodeAdd").click(function(){
+			if($(this).hasClass("disabled")) return;
+			var btn = $(this);
+			btn.button('loading');
+			$.post('./active/node.add', {ip: $("#ip").val(), token: $("#token").val()}, function(data){
+				var data = $.parseJSON(data);
+				if(data.result){
+					$.globalMessenger().post({
+						message: data.msg, 
+						type:"success", 
+						showCloseButton: true,
+						actions: {
+							enter: {
+								label: "直接进入",
+								phrase: '跳转至节点列表(TIME)',
+								auto: true,
+								delay: 2,
+								action: function() {
+									window.location.href = "./node-list-1";
+								}							
+							}
+						}
+					});
+				}else{
+					$.globalMessenger().post({ message: data.msg, type:"error", showCloseButton: true});
+					setTimeout(function(){
+						btn.button('reset');
+					}, 1000);
+				}
+			});
+		});
+	});
+</script>
+
+<!-- <p>
+	一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明一些说明
+</p> -->
+<h3 class="node-add-ip"><?php echo $ip; ?></h3>
+<div class="node-add-input">
+	<input type="hidden" value="<?php echo $ip; ?>" id="ip"/>
+	<input type="text" class="input-large" placeholder="节点token" id="token"/>
+</div>
+<div class="node-add-btn">
+	<div class="btn btn-info" id="nodeAdd" data-loading-text="添加节点">添加节点</div>
+	<a href="./node-list-1" class="btn">返回</a>
+</div>
