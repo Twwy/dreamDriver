@@ -3,7 +3,7 @@
 向所有追梦的人致敬。
 
 ## RESTful 接口功能
-* [user.login](./blob/master/docs/user.login.md)
+* [user.login](./docs/user.login.md)
 * user.reg
 * user.exit
 * dream.add
