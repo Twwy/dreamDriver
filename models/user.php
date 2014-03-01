@@ -1,20 +1,19 @@
 <?php
 
-
-	//////////////////////////////////////////////////////////////
-	//															//
-	//	file user.php											//
-	//															//
-	//	model user												// 
-	//															//
-	//															//
-	//	http://twwy.net											//
-	//															//
-	//////////////////////////////////////////////////////////////
+// +----------------------------------------------------------------------+
+// | Warning: Design By Everyone's Dreams                                 |
+// +----------------------------------------------------------------------+
+// | FileName: user.php                                                   |
+// +----------------------------------------------------------------------+
+// | Version: 1.0                                                         |
+// +----------------------------------------------------------------------+
+// | Author: Twwy                                                         |
+// | Email: twwwwy@gmail.com                                              |
+// +----------------------------------------------------------------------+
 
 class user extends model{
 
-	public function add($mail,$pass){				//添加用户
+	public function add($mail,$pass){
 		$salt = random('str', 27);
 		$passwd = $this->passEncode($pass, $salt);
 		$insertArray = array(
@@ -28,7 +27,7 @@ class user extends model{
 		return $this->db()->insertId();	
 	}
 
-	public function get($value, $type = 'user_id'){		//获取用户 mail 或 user_id和name
+	public function get($value, $type = 'user_id'){	
 		$whereArray = array(
 			'user_id' => " user_id = '{$value}' ",
 			'mail' => " mail = '{$value}' ",
@@ -38,18 +37,18 @@ class user extends model{
 		return $this->db()->query($sql, 'row');	
 	}
 
-	public function passEncode($pass, $salt){  		//密码加密 
+	public function passEncode($pass, $salt){
 		return md5("{$salt}2312twwylolo?{$salt}{$pass}--sd22445532");
 	}
 
-	public function sessionCheck($callback = false){		//session检查
+	public function sessionCheck($callback = false){
 		if(empty($_SESSION['user_id'])){
 			if($callback) return $callback();
 			else exit(header('Location: ./'));
 		}else return $_SESSION['user_id'];
 	}
 
-	public function login($user_id, $data = array()){	//用户登录
+	public function login($user_id, $data = array()){
 		$_SESSION['user_id'] = $user_id;
 		$_SESSION['data'] = $data;	//覆盖用户缓存数据
 
