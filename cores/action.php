@@ -22,6 +22,8 @@ router('action\/job\.list',function(){require('./actions/job/list.php');});
 router('action\/problem\.add',function(){require('./actions/problem/add.php');});
 
 router('action\/solution\.add',function(){require('./actions/solution/add.php');});
+router('action\/solution\.modify',function(){require('./actions/solution/modify.php');});
+router('action\/solution\.remove',function(){require('./actions/solution/remove.php');});
 
 
 ?>

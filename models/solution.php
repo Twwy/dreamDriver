@@ -35,10 +35,14 @@ class solution extends model{
 		return $this->db()->query($sql, 'row');
 	}
 
-	// public function problemShow($job_id, $start_time, $stop_time){
-	// 	$sql = "SELECT * FROM problem WHERE job_id = '{$job_id}' AND (show_time < {$stop_time} OR show_time > {$start_time}) LIMIT 0,1000";
-	// 	return $this->db()->query($sql, 'array');
-	// }
+	public function update($updateArray, $where){
+		return $this->db()->update('solution', $updateArray, $where);
+	}
+
+	public function remove($where){
+		return $this->db()->del('solution', $where);
+	}
+
 	
 	// public function solutionShow($problem_id){
 	// 	$sql = "SELECT * FROM solution WHERE problem_id = '{$problem_id}'";
