@@ -5,16 +5,11 @@
 // +----------------------------------------------------------------------+
 // | FileName: view.php                                                   |
 // +----------------------------------------------------------------------+
-// | Desc: view router                                                    |
-// +----------------------------------------------------------------------+
 // | Version: 1.0                                                         |
 // +----------------------------------------------------------------------+
 // | Author: Twwy                                                         |
 // | Email: twwwwy@gmail.com                                              |
 // +----------------------------------------------------------------------+
-// | LastChange: 2013-12-05 11:07:58                                      |
-// +----------------------------------------------------------------------+
-
 
 
 // router('default',function(){
@@ -153,12 +148,12 @@ router('404',function(){
 // });
 
 
-router('exit',function($matches){
-	$user = model('user');
-	$user_id = $user->sessionCheck();
-	session_destroy();
-	exit(header('Location: ./'));
-});
+// router('exit',function($matches){
+// 	$user = model('user');
+// 	$user_id = $user->sessionCheck();
+// 	session_destroy();
+// 	exit(header('Location: ./'));
+// });
 
 
 ?>

@@ -1,24 +1,25 @@
 <?php
 
-	//////////////////////////////////////////////////////////////
-	//															//
-	//	file job.php 											//
-	//															//
-	//	model job												// 
-	//                                             	        	//
-	//                                             	        	//
-	//	http://twwy.net                               	  		//
-	//                                                  		//
-	//////////////////////////////////////////////////////////////
+// +----------------------------------------------------------------------+
+// | Warning: Design By Everyone's Dreams                                 |
+// +----------------------------------------------------------------------+
+// | FileName: job.php                                                    |
+// +----------------------------------------------------------------------+
+// | Version: 1.0                                                         |
+// +----------------------------------------------------------------------+
+// | Author: Twwy                                                         |
+// | Email: twwwwy@gmail.com                                              |
+// +----------------------------------------------------------------------+
 
 
 class job extends model{
 
-	public function add($user_id, $name, $creat_time){
+	public function add($user_id, $name, $creat_time, $expect){
 		$insertArray = array(
 			'name' => $name, 
 			'user_id' => $user_id,
-			'creat_time' => time()
+			'creat_time' => time(),
+			'expect_time' => $expect
 		);
 		$result = $this->db()->insert('job', $insertArray);
 		if($result == 0) return false;
@@ -26,25 +27,9 @@ class job extends model{
 		return $id;
 	}
 
-	public function getByName($name, $user_id){
-		$sql = "SELECT * FROM job WHERE user_id = '{$user_id}' AND name = '{$name}'";
-		return $this->db()->query($sql, 'row');
-	}
-
-	public function undone($user_id){
-		$sql = "SELECT count(1) FROM job WHERE user_id = '{$user_id}' AND done_time = 0";
-		$rs = $this->db()->query($sql, 'row');
-		return $rs['count(1)'];
-	}
-
-	public function user($user_id, $start, $limit, $key = false){
-		if($key) $key = " AND name LIKE '%{$key}%'";
-		else $key = '';
-		$sql = "SELECT * FROM job WHERE user_id = '{$user_id}' {$key} ORDER BY creat_time DESC LIMIT {$start},{$limit}";
-		$result = $this->db()->query($sql, 'array');
-		$sql = "SELECT count(1) FROM job WHERE user_id = '{$user_id}' {$key}";	
-		$count = $this->db()->query($sql, 'row');
-		return array($result, $count['count(1)']);
+	public function conflictName($name, $user_id){
+		$sql = "SELECT * FROM job WHERE user_id = '{$user_id}' AND name = '{$name}' AND done_time = 0";
+		return $this->db()->query($sql, 'row');		
 	}
 
 	public function get($job_id){
@@ -52,34 +37,17 @@ class job extends model{
 		return $this->db()->query($sql, 'row');
 	}
 
-	public function problemAdd($job_id, $user_id, $describe, $show_time){
-		$time = time();
-		$insertArray = array(
-			'describe' => $describe, 
-			'user_id' => $user_id,
-			'job_id' => $job_id,
-			'show_time' => $show_time,
-			'creat_time' => $time,
-			'last_update_time' => $time
-		);
-		$result = $this->db()->insert('problem', $insertArray);
-		if($result == 0) return false;
-		$id = $this->db()->insertId();
-		return $id;
-	}
-
-	public function problemShow($job_id, $start_time, $stop_time){
-		$sql = "SELECT * FROM problem WHERE job_id = '{$job_id}' AND (show_time < {$stop_time} OR show_time > {$start_time}) LIMIT 0,1000";
-		return $this->db()->query($sql, 'array');
-	}
-	
-	public function solutionShow($problem_id){
-		$sql = "SELECT * FROM solution WHERE problem_id = '{$problem_id}'";
+	public function user($user_id, $start, $limit, $done, $key = false){
+		if($key) $key = " AND name LIKE '%{$key}%'";
+		else $key = '';
+		if($done < 0) $done = '';
+		elseif($done == 0) $done = 'AND done_time = 0';
+		else $done = 'AND done_time > 0';
+		$sql = "SELECT * FROM job WHERE user_id = '{$user_id}' {$done} {$key} ORDER BY creat_time DESC LIMIT {$start},{$limit}";
 		$result = $this->db()->query($sql, 'array');
-		$sql = "SELECT count(1) FROM solution WHERE problem_id = '{$problem_id}'";	
+		$sql = "SELECT count(1) FROM job WHERE user_id = '{$user_id}' {$done} {$key}";	
 		$count = $this->db()->query($sql, 'row');
 		return array($result, $count['count(1)']);
 	}
-	
 
 }

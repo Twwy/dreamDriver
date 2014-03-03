@@ -16,27 +16,21 @@ $user_id = $user->sessionCheck(function(){
 	json(false, '未登录');
 });
 
-$name = filter('name', '/^[a-zA-Z0-9\x{4e00}-\x{9fa5}\-\_\.]{1,255}$/u', '格式错误，只支持中文英文数字-_.');
-$expect = filter('expect', '/^[0-9]{1,9}$/', '期望时间值为数字(秒)', 3600);
+$job_id = filter('job_id', '/^[0-9]{1,9}$/', '任务ID格式错误');
+$describe = filter('describe', '/^[a-zA-Z0-9\x{4e00}-\x{9fa5}\-\_\.]{1,1023}$/u', '格式错误，只支持中文英文数字-_.');
+$expect = filter('expect', '/^[0-9]{1,9}$/', '期望时间值为数字(秒)', 600);
 
 $job = model('job');
+$jobInfo = $job->get($job_id);
+if(empty($jobInfo)) json(false, '任务不存在');
+if($jobInfo['user_id'] != $user_id) json(false, '用户无权访问该任务');
+if($jobInfo['expect_time'] > 0 && $expect > $jobInfo['expect_time']) json(false, '疑问的预计时间不能大于任务的预计时间');
+if($jobInfo['done_time'] > 0) json(false, '该任务已完成，无法继续添加疑问');
 
-//check the parallel job counts
-$userInfo = $user->get($user_id);
-if(empty($userInfo)) json(false, '用户不存在');
-if($userInfo['parallel_job'] > 0){
-	$count = $job->undone($user_id);
-	if($count >= $userInfo['parallel_job']) json(false, '同时进行的任务已到上限');
-}
+$problem = model('problem');
+$id = $problem->add($job_id, $user_id, $describe, $expect);
+if($id == 0) json(false, '问题添加失败');
 
-//任务名查重
-$userJob = $job->conflictName($name, $user_id);
-if(!empty($userJob)) json(false, '任务名冲突。同时正在进行的任务，任务名称不能重复');
-
-//添加站点
-$job_id = $job->add($user_id, $name, time(), $expect);
-if($job_id == 0) json(false, '任务添加失败');
-
-json(true, '任务添加成功', array('job_id' => $job_id));
+json(true, '问题添加成功');
 
 ?>

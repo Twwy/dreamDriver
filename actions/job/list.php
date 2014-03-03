@@ -1,44 +1,46 @@
 <?php
 
-	//////////////////////////////////////////////////////////////
-	//															//
-	//	file list 												// 
-	//     														//
-	//	/site.list												//
-	//                                        	        		//
-	//	This file is part of the openCDN project				//
-	//															//
-	//	http://ocdn.me                              	    	//
-	//                                                  		//
-	//////////////////////////////////////////////////////////////
+// +----------------------------------------------------------------------+
+// | Warning: Design By Everyone's Dreams                                 |
+// +----------------------------------------------------------------------+
+// | FileName: list.php                                                   |
+// +----------------------------------------------------------------------+
+// | Version: 1.0                                                         |
+// +----------------------------------------------------------------------+
+// | Author: Twwy                                                         |
+// | Email: twwwwy@gmail.com                                              |
+// +----------------------------------------------------------------------+
 
-	$user = model('user');
-	$user_id = $user->sessionCheck(function(){
-		json(false, '未登录');
-	});
+$user = model('user');
+$user_id = $user->sessionCheck(function(){
+	json(false, '未登录');
+});
 
-	$search = filter('search', '/^[a-zA-Z0-9\x{4e00}-\x{9fa5}\-\_\.]{0,255}$/u', '格式错误，只支持中文英文数字-_.');
+$page = filter('page', '/^[0-9]{1,9}$/', '显示第几页格式错误', 1);
+$limit = filter('limit', '/^[0-9]{1,9}$/', '每页显示数格式错误', 10);
+$type = filter('type', '/^0|1|2$/', '类型错误(0|1|2)', 0);
+$search = filter('search', '/^[a-zA-Z0-9\x{4e00}-\x{9fa5}\-\_\.]{1,255}$/u$/', '格式错误，只支持中文英文数字-_.', '');
 
-	$pagenum = 1;
+$job = model('job');
+$start = ($page - 1) * $limit;
+if(empty($search)) $search = false;
 
-	$site = model('site');
-	$limit = 10;
-	$start = ($pagenum - 1) * $limit;
-	
-	if(empty($search)) list($list, $count) = $site->user($user_id, $start, $limit);
-	else list($list, $count) = $site->user($user_id, $start, $limit, $search);
+if($type == 1){
+	list($list, $count) = $job->user($user_id, $start, $limit, 0, $search);
+}elseif($type == 2){
+	list($list, $count) = $job->user($user_id, $start, $limit, 1, $search);
+}else{
+	list($list, $count) = $job->user($user_id, $start, $limit, -1, $search);
+}
 
-	foreach ($list as $key => $value) {
-		$list[$key]['level'] = $site->getLevel($value['site_id']);
-	}
+$rs = array(
+	'total' => $count,
+	'list' => $list,
+	'page' => $page,
+	'limit' => $limit,
+	'search' => $search
+);
 
-	$data = array(
-		'list' => $list,
-		'total' => $count,
-		'limit' => $limit,
-		'pagenum' => $pagenum
-	);
-
-	json(true, '获取成功', $data);
+json(true, '获取', $rs);
 
 ?>
