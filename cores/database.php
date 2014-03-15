@@ -33,14 +33,33 @@ class database{
 		else return Array();
 	}
 
-	public function insert($table, $insertArray){ 
-		$columns = array_keys($insertArray);
-		$values = array_values($insertArray);
-		foreach($values as $key => $value) $values[$key] = $this->dbObj->quote($value);
-		foreach($columns as $key => $value) $columns[$key] = "{$table}.{$value}";
-		$columns = implode(',', $columns);
-		$values = implode(',', $values);
-		$query = "INSERT INTO {$table} ({$columns}) VALUES ({$values})";
+	public function insert($table, $insertArray){
+		$query = "INSERT INTO {$table} ";
+		if(isset($insertArray[0])){			//批量插入
+			foreach ($insertArray as $inkey => $inValue) {
+				$values = array_values($inValue);
+				foreach($values as $key => $value) $values[$key] = $this->dbObj->quote($value);
+				$values = implode(',', $values);
+				if($inkey == 0){		//第一个插入要加字段
+
+					$columns = array_keys($inValue);
+					foreach($columns as $key => $value) $columns[$key] = "{$table}.{$value}";
+					$columns = implode(',', $columns);
+					
+					$query .= " ({$columns}) VALUES ({$values}) ";
+				}else{
+					$query .= " ,({$values}) ";
+				}
+			}
+		}else{
+			$columns = array_keys($insertArray);
+			$values = array_values($insertArray);
+			foreach($values as $key => $value) $values[$key] = $this->dbObj->quote($value);
+			foreach($columns as $key => $value) $columns[$key] = "{$table}.{$value}";
+			$columns = implode(',', $columns);
+			$values = implode(',', $values);
+			$query .= " ({$columns}) VALUES ({$values}) ";
+		}
 		return $this->dbObj->exec($query);
 	}
 

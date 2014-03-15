@@ -14,7 +14,6 @@
 
 class problem extends model{
 
-
 	public function add($job_id, $user_id, $describe, $expect){
 		$time = time();
 		$insertArray = array(
@@ -34,6 +33,23 @@ class problem extends model{
 	public function get($problem_id){
 		$sql = "SELECT * FROM problem WHERE problem_id = '{$problem_id}'";
 		return $this->db()->query($sql, 'row');
+	}
+
+	public function gets($problems){
+		$problemStr = implode(',', $problems);
+		$sql = "SELECT * FROM problem WHERE problem_id in ({$problemStr})";
+		return $this->db()->query($sql, 'array');
+	}
+
+	public function addRelates($problem_id, $relates){
+		$insertArray = array();
+		foreach ($relates as $value){
+			$insertArray[] = array(
+				'problem_id' => $problem_id,
+				'related_problem_id' => $value
+			);
+		}
+		return $this->db()->insert('problem_related', $insertArray);
 	}
 
 	// public function problemShow($job_id, $start_time, $stop_time){
